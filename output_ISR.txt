@@ -1,0 +1,740 @@
+./output.txt:./output.txt:./cpu/stm32w108/hal/error-def.h:#define ST_SLEEP_INTERRUPTED(0x85)
+./output.txt:./output.txt:./cpu/stm32w108/hal/error-def.h:DEFINE_ERROR(SLEEP_INTERRUPTED, 0x85)
+./output.txt:./output.txt:./cpu/stm32w108/hal/micro/cortexm3/system-timer.c:      status = ST_SLEEP_INTERRUPTED;
+./output.txt:./output.txt:./cpu/stm32w108/hal/micro/cortexm3/micro-common.h: * ::ST_SLEEP_INTERRUPTED and the duration parameter reports the amount of
+./output.txt:./cpu/stm32w108/hal/error-def.h:#define ST_SLEEP_INTERRUPTED(0x85)
+./output.txt:./cpu/stm32w108/hal/error-def.h:DEFINE_ERROR(SLEEP_INTERRUPTED, 0x85)
+./output.txt:./cpu/stm32w108/hal/micro/cortexm3/system-timer.c:      status = ST_SLEEP_INTERRUPTED;
+./output.txt:./cpu/stm32w108/hal/micro/cortexm3/micro-common.h: * ::ST_SLEEP_INTERRUPTED and the duration parameter reports the amount of
+./cpu/cc2430/rtimer-arch.c:cc2430_timer_1_ISR(void) __interrupt (T1_VECTOR)
+./cpu/cc2430/rtimer-arch.h:void cc2430_timer_1_ISR(void) __interrupt (T1_VECTOR);
+./cpu/cc2430/dev/watchdog-cc2430.c:cc4230_watchdog_ISR(void) __interrupt (WDT_VECTOR)
+./cpu/cc2430/dev/watchdog-cc2430.c:  DISABLE_INTERRUPTS();
+./cpu/cc2430/dev/dma.h:void dma_ISR( void ) __interrupt (DMA_VECTOR);
+./cpu/cc2430/dev/watchdog-cc2430.h:void cc4230_watchdog_ISR(void) __interrupt (WDT_VECTOR);
+./cpu/cc2430/dev/bus.h:void clock_ISR( void ) __interrupt (ST_VECTOR);
+./cpu/cc2430/dev/cc2430_rf.h:#ifdef CC2430_CONF_RFERR_INTERRUPT
+./cpu/cc2430/dev/cc2430_rf.h:#define CC2430_RFERR_INTERRUPT CC2430_CONF_RFERR_INTERRUPT
+./cpu/cc2430/dev/cc2430_rf.h:#define CC2430_RFERR_INTERRUPT 0
+./cpu/cc2430/dev/cc2430_rf.h:extern void cc2430_rf_ISR( void ) __interrupt (RF_VECTOR);
+./cpu/cc2430/dev/cc2430_rf.h:#if CC2430_RFERR_INTERRUPT
+./cpu/cc2430/dev/cc2430_rf.h:extern void cc2430_rf_error_ISR( void ) __interrupt (RFERR_VECTOR);
+./cpu/cc2430/dev/uart0.h:void uart0_rx_ISR( void ) __interrupt (URX0_VECTOR);
+./cpu/cc2430/dev/uart0.h:void uart0_tx_ISR( void ) __interrupt (UTX0_VECTOR);
+./cpu/cc2430/dev/uart1.h:void uart1_rx_ISR( void ) __interrupt (URX1_VECTOR);
+./cpu/cc2430/dev/uart1.h:void uart1_tx_ISR( void ) __interrupt (UTX1_VECTOR);
+./cpu/cc2430/dev/uart_intr.c:uart0_rx_ISR(void) __interrupt (URX0_VECTOR)
+./cpu/cc2430/dev/uart_intr.c:uart0_tx_ISR( void ) __interrupt (UTX0_VECTOR)
+./cpu/cc2430/dev/uart_intr.c:uart1_rx_ISR(void) __interrupt (URX1_VECTOR)
+./cpu/cc2430/dev/uart_intr.c:uart1_tx_ISR( void ) __interrupt (UTX1_VECTOR)
+./cpu/cc2430/dev/clock.c:  DISABLE_INTERRUPTS();
+./cpu/cc2430/dev/clock.c:  ENABLE_INTERRUPTS();
+./cpu/cc2430/dev/clock.c:clock_ISR(void) __interrupt(ST_VECTOR)
+./cpu/cc2430/dev/clock.c:  DISABLE_INTERRUPTS();
+./cpu/cc2430/dev/clock.c:  ENABLE_INTERRUPTS();
+./cpu/cc2430/dev/cc2430_rf_intr.c:cc2430_rf_ISR( void ) __interrupt (RF_VECTOR)
+./cpu/cc2430/dev/cc2430_rf_intr.c:#if CC2430_RFERR_INTERRUPT
+./cpu/cc2430/dev/cc2430_rf_intr.c:cc2430_rf_error_ISR( void ) __interrupt (RFERR_VECTOR)
+./cpu/cc2430/dev/cc2430_rf.c:#if CC2430_RFERR_INTERRUPT
+./cpu/cc2430/dev/cc2430_rf.c:#if CC2430_RFERR_INTERRUPT
+./cpu/cc2430/dev/cc2430_rf.c:#if CC2430_RFERR_INTERRUPT
+./cpu/cc2430/dev/cc2430_rf.c:#if CC2430_RFERR_INTERRUPT
+./cpu/cc2430/dev/dma_intr.c:dma_ISR(void) __interrupt (DMA_VECTOR)
+./cpu/cc2430/8051def.h:#define __interrupt(x)
+./cpu/cc2430/8051def.h:#define DISABLE_INTERRUPTS()  do {EA = 0;} while(0)
+./cpu/cc2430/8051def.h:#define ENABLE_INTERRUPTS()   do {EA = 1;} while(0)
+./cpu/cc2430/cc2430_sfr.h:#define RX_INTERRUPTED	0x10
+./cpu/avr/rtimer-arch.c:#if RTIMER_CONF_NESTED_INTERRUPTS
+./cpu/avr/dev/rs232_atmega1281.h:#define USART_INTERRUPT_RX_COMPLETE _BV (RXCIE0)
+./cpu/avr/dev/rs232_atmega1281.h:#define USART_INTERRUPT_TX_COMPLETE _BV (TXCIE0)
+./cpu/avr/dev/rs232_atmega1281.h:#define USART_INTERRUPT_DATA_REG_EMPTY _BV (UDRIE0)
+./cpu/avr/dev/lanc111.c:#define LANC111_SIGNAL          sig_INTERRUPT0
+./cpu/avr/dev/lanc111.c:#define LANC111_SIGNAL          sig_INTERRUPT1
+./cpu/avr/dev/lanc111.c:#define LANC111_SIGNAL          sig_INTERRUPT2
+./cpu/avr/dev/lanc111.c:#define LANC111_SIGNAL          sig_INTERRUPT3
+./cpu/avr/dev/lanc111.c:#define LANC111_SIGNAL          sig_INTERRUPT4
+./cpu/avr/dev/lanc111.c:#define LANC111_SIGNAL          sig_INTERRUPT6
+./cpu/avr/dev/lanc111.c:#define LANC111_SIGNAL          sig_INTERRUPT7
+./cpu/avr/dev/lanc111.c:#define LANC111_SIGNAL          sig_INTERRUPT5
+./cpu/avr/dev/lanc111.c:    ni->ni_interrupts++;
+./cpu/avr/dev/rs232.c:#ifdef RS232_CONF_TX_INTERRUPTS
+./cpu/avr/dev/rs232.c:#define RS232_TX_INTERRUPTS RS232_CONF_TX_INTERRUPTS
+./cpu/avr/dev/rs232.c:#define RS232_TX_INTERRUPTS 0
+./cpu/avr/dev/rs232.c:#if RS232_TX_INTERRUPTS
+./cpu/avr/dev/rs232.c:#if RS232_TX_INTERRUPTS
+./cpu/avr/dev/rs232.c:#if RS232_TX_INTERRUPTS
+./cpu/avr/dev/rs232.c:#if RS232_TX_INTERRUPTS
+./cpu/avr/dev/rs232.c:   D_UCSR0B =  USART_INTERRUPT_RX_COMPLETE | USART_INTERRUPT_TX_COMPLETE | \
+./cpu/avr/dev/rs232.c:   D_UCSR0B =  USART_INTERRUPT_RX_COMPLETE | \
+./cpu/avr/dev/rs232.c:#if RS232_TX_INTERRUPTS
+./cpu/avr/dev/rs232.c:   D_UCSR1B =  USART_INTERRUPT_RX_COMPLETE | USART_INTERRUPT_TX_COMPLETE | \
+./cpu/avr/dev/rs232.c:   D_UCSR1B =  USART_INTERRUPT_RX_COMPLETE | \
+./cpu/avr/dev/rs232.c:#if RS232_TX_INTERRUPTS
+./cpu/avr/dev/rs232.c:   D_UCSR2B =  USART_INTERRUPT_RX_COMPLETE | USART_INTERRUPT_TX_COMPLETE | \
+./cpu/avr/dev/rs232.c:   D_UCSR2B =  USART_INTERRUPT_RX_COMPLETE | \
+./cpu/avr/dev/rs232.c:#if RS232_TX_INTERRUPTS
+./cpu/avr/dev/rs232.c:#else /* RS232_TX_INTERRUPTS */
+./cpu/avr/dev/rs232.c:#endif /* RS232_TX_INTERRUPTS */
+./cpu/avr/dev/rs232_atmega32.h:#define USART_INTERRUPT_RX_COMPLETE _BV (RXCIE)
+./cpu/avr/dev/rs232_atmega32.h:#define USART_INTERRUPT_TX_COMPLETE _BV (TXCIE)
+./cpu/avr/dev/rs232_atmega32.h:#define USART_INTERRUPT_DATA_REG_EMPTY _BV (UDRIE)
+./cpu/avr/dev/rs232_atmega128.h:#define USART_INTERRUPT_RX_COMPLETE _BV (RXCIE)
+./cpu/avr/dev/rs232_atmega128.h:#define USART_INTERRUPT_TX_COMPLETE _BV (TXCIE)
+./cpu/avr/dev/rs232_atmega128.h:#define USART_INTERRUPT_DATA_REG_EMPTY _BV (UDRIE)
+./cpu/avr/dev/rs232_atmega1284.h:#define USART_INTERRUPT_RX_COMPLETE _BV (RXCIE0)
+./cpu/avr/dev/rs232_atmega1284.h:#define USART_INTERRUPT_TX_COMPLETE _BV (TXCIE0)
+./cpu/avr/dev/rs232_atmega1284.h:#define USART_INTERRUPT_DATA_REG_EMPTY _BV (UDRIE0)
+./cpu/avr/dev/rs232_at90usb1287.h:#define USART_INTERRUPT_RX_COMPLETE _BV (RXCIE1)
+./cpu/avr/dev/rs232_at90usb1287.h:#define USART_INTERRUPT_TX_COMPLETE _BV (TXCIE1)
+./cpu/avr/dev/rs232_at90usb1287.h:#define USART_INTERRUPT_DATA_REG_EMPTY _BV (UDRIE1)
+./cpu/avr/dev/clock.c:#ifdef HANDLE_UNSUPPORTED_INTERRUPTS
+./cpu/avr/dev/clock.c:#ifdef HANG_ON_UNKNOWN_INTERRUPT
+./cpu/avr/dev/usb/conf_usb.h:#ifndef CDC_ECM_USES_INTERRUPT_ENDPOINT
+./cpu/avr/dev/usb/conf_usb.h:#define CDC_ECM_USES_INTERRUPT_ENDPOINT	0
+./cpu/avr/dev/usb/usb_task.c:   Enable_interrupt();
+./cpu/avr/dev/usb/usb_task.c:   Usb_enable_vbus_interrupt();
+./cpu/avr/dev/usb/usb_task.c:   Usb_enable_reset_interrupt();
+./cpu/avr/dev/usb/usb_task.c:	if (schedule_interrupt) {
+./cpu/avr/dev/usb/usb_task.c:			schedule_interrupt = 0;
+./cpu/avr/dev/usb/usb_task.c:   Enable_interrupt();
+./cpu/avr/dev/usb/usb_task.c:   Usb_enable_vbus_interrupt();
+./cpu/avr/dev/usb/usb_task.c:   Enable_interrupt();
+./cpu/avr/dev/usb/usb_task.c:   if (Is_usb_vbus_transition() && Is_usb_vbus_interrupt_enabled())
+./cpu/avr/dev/usb/usb_task.c:			Usb_enable_reset_interrupt();
+./cpu/avr/dev/usb/usb_task.c:   if (Is_usb_sof() && Is_sof_interrupt_enabled())
+./cpu/avr/dev/usb/usb_task.c:   if (Is_usb_suspend() && Is_suspend_interrupt_enabled())
+./cpu/avr/dev/usb/usb_task.c:      Usb_enable_wake_up_interrupt();
+./cpu/avr/dev/usb/usb_task.c:   if (Is_usb_wake_up() && Is_swake_up_interrupt_enabled())
+./cpu/avr/dev/usb/usb_task.c:      Usb_disable_wake_up_interrupt();
+./cpu/avr/dev/usb/usb_task.c:   if (Is_usb_resume() && Is_resume_interrupt_enabled())
+./cpu/avr/dev/usb/usb_task.c:      Usb_disable_wake_up_interrupt();
+./cpu/avr/dev/usb/usb_task.c:      Usb_disable_resume_interrupt();
+./cpu/avr/dev/usb/usb_task.c:   if (Is_usb_reset()&& Is_reset_interrupt_enabled())
+./cpu/avr/dev/usb/usb_drv.c://! usb_select_endpoint_interrupt.
+./cpu/avr/dev/usb/usb_drv.c:U8 usb_select_enpoint_interrupt(void)
+./cpu/avr/dev/usb/usb_drv.c:   interrupt_flags = Usb_interrupt_flags();
+./cpu/avr/dev/usb/usb_drv.c:U8 usb_get_nb_pipe_interrupt(void)
+./cpu/avr/dev/usb/usb_drv.c:   interrupt_flags = Host_get_pipe_interrupt();
+./cpu/avr/dev/usb/usb_descriptors.h:#if CDC_ECM_USES_INTERRUPT_ENDPOINT
+./cpu/avr/dev/usb/usb_descriptors.h:#if CDC_ECM_USES_INTERRUPT_ENDPOINT
+./cpu/avr/dev/usb/serial/uart_usb_lib.c:		TYPE_INTERRUPT,   
+./cpu/avr/dev/usb/usb_descriptors.c:#if CDC_ECM_USES_INTERRUPT_ENDPOINT
+./cpu/avr/dev/usb/usb_specific_request.c:								 TYPE_INTERRUPT,     \
+./cpu/avr/dev/usb/storage/avr_flash.c:         Disable_interrupt();    // Global disable.
+./cpu/avr/dev/usb/storage/avr_flash.c:         Enable_interrupt();     // Global interrupt re-enable.
+./cpu/avr/dev/usb/storage/avr_flash.c:  	  Disable_interrupt();    // Global disable.
+./cpu/avr/dev/usb/storage/avr_flash.c:		  Enable_interrupt();    // Global enable again
+./cpu/avr/dev/usb/compiler.h:#define Enable_interrupt() __enable_interrupt()
+./cpu/avr/dev/usb/compiler.h:#define Disable_interrupt() __disable_interrupt()
+./cpu/avr/dev/usb/compiler.h:   #define Enable_interrupt() sei()
+./cpu/avr/dev/usb/compiler.h:   #define Disable_interrupt() cli()
+./cpu/avr/dev/usb/usb_drv.h:#define TYPE_INTERRUPT           3
+./cpu/avr/dev/usb/usb_drv.h: //typedef enum ep_type {TYPE_CONTROL, TYPE_BULK, TYPE_ISOCHRONOUS, TYPE_INTERRUPT} e_ep_type;
+./cpu/avr/dev/usb/usb_drv.h:                                      Host_set_interrupt_frequency(freq), \
+./cpu/avr/dev/usb/usb_drv.h:#define Usb_enable_id_interrupt()     (USBCON  |=  (1<<IDTE))
+./cpu/avr/dev/usb/usb_drv.h:#define Usb_disable_id_interrupt()    (USBCON  &= ~(1<<IDTE))
+./cpu/avr/dev/usb/usb_drv.h:#define Is_usb_id_interrupt_enabled() ((USBCON &  (1<<IDTE))     ? TRUE : FALSE)
+./cpu/avr/dev/usb/usb_drv.h:#define Usb_enable_vbus_interrupt()   (USBCON  |=  (1<<VBUSTE))
+./cpu/avr/dev/usb/usb_drv.h:#define Usb_disable_vbus_interrupt()  (USBCON  &= ~(1<<VBUSTE))
+./cpu/avr/dev/usb/usb_drv.h:#define Is_usb_vbus_interrupt_enabled() ((USBCON &  (1<<VBUSTE))     ? TRUE : FALSE)
+./cpu/avr/dev/usb/usb_drv.h:#define Usb_get_general_interrupt()      (USBINT & (USBCON & MSK_IDTE_VBUSTE))
+./cpu/avr/dev/usb/usb_drv.h:#define Usb_ack_all_general_interrupt()  (USBINT = ~(USBCON & MSK_IDTE_VBUSTE))
+./cpu/avr/dev/usb/usb_drv.h:#define Usb_get_otg_interrupt()            (OTGINT & OTGIEN)
+./cpu/avr/dev/usb/usb_drv.h:#define Usb_ack_all_otg_interrupt()        (OTGINT = ~OTGIEN)
+./cpu/avr/dev/usb/usb_drv.h:#define Usb_enable_suspend_time_out_interrupt()   (OTGIEN  |=  (1<<STOE))
+./cpu/avr/dev/usb/usb_drv.h:#define Usb_disable_suspend_time_out_interrupt()  (OTGIEN  &= ~(1<<STOE))
+./cpu/avr/dev/usb/usb_drv.h:#define Is_suspend_time_out_interrupt_enabled()   ((OTGIEN &  (1<<STOE))   ? TRUE : FALSE)
+./cpu/avr/dev/usb/usb_drv.h:#define Usb_ack_suspend_time_out_interrupt()      (OTGINT  &= ~(1<<STOI))
+./cpu/avr/dev/usb/usb_drv.h:#define Is_usb_suspend_time_out_interrupt()       ((OTGINT &   (1<<STOI))    ? TRUE : FALSE)
+./cpu/avr/dev/usb/usb_drv.h:#define Usb_enable_hnp_error_interrupt()          (OTGIEN  |=  (1<<HNPERRE))
+./cpu/avr/dev/usb/usb_drv.h:#define Usb_disable_hnp_error_interrupt()         (OTGIEN  &= ~(1<<HNPERRE))
+./cpu/avr/dev/usb/usb_drv.h:#define Is_hnp_error_interrupt_enabled()          ((OTGIEN &  (1<<HNPERRE))   ? TRUE : FALSE)
+./cpu/avr/dev/usb/usb_drv.h:#define Usb_ack_hnp_error_interrupt()             (OTGINT  &= ~(1<<HNPERRI))
+./cpu/avr/dev/usb/usb_drv.h:#define Is_usb_hnp_error_interrupt()              ((OTGINT &   (1<<HNPERRI)) ? TRUE : FALSE)
+./cpu/avr/dev/usb/usb_drv.h:#define Usb_enable_role_exchange_interrupt()      (OTGIEN  |=  (1<<ROLEEXE))
+./cpu/avr/dev/usb/usb_drv.h:#define Usb_disable_role_exchange_interrupt()     (OTGIEN  &= ~(1<<ROLEEXE))
+./cpu/avr/dev/usb/usb_drv.h:#define Is_role_exchange_interrupt_enabled()      ((OTGIEN &  (1<<ROLEEXE))   ? TRUE : FALSE)
+./cpu/avr/dev/usb/usb_drv.h:#define Usb_ack_role_exchange_interrupt()         (OTGINT  &= ~(1<<ROLEEXI))
+./cpu/avr/dev/usb/usb_drv.h:#define Is_usb_role_exchange_interrupt()          ((OTGINT &   (1<<ROLEEXI)) ? TRUE : FALSE)
+./cpu/avr/dev/usb/usb_drv.h:#define Usb_enable_bconnection_error_interrupt()  (OTGIEN  |=  (1<<BCERRE))
+./cpu/avr/dev/usb/usb_drv.h:#define Usb_disable_bconnection_error_interrupt() (OTGIEN  &= ~(1<<BCERRE))
+./cpu/avr/dev/usb/usb_drv.h:#define Is_bconnection_error_interrupt_enabled()  ((OTGIEN &  (1<<BCERRE))   ? TRUE : FALSE)
+./cpu/avr/dev/usb/usb_drv.h:#define Usb_ack_bconnection_error_interrupt()     (OTGINT  &= ~(1<<BCERRI))
+./cpu/avr/dev/usb/usb_drv.h:#define Is_usb_bconnection_error_interrupt()      ((OTGINT &   (1<<BCERRI))  ? TRUE : FALSE)
+./cpu/avr/dev/usb/usb_drv.h:#define Usb_enable_vbus_error_interrupt()         (OTGIEN  |=  (1<<VBERRE))
+./cpu/avr/dev/usb/usb_drv.h:#define Usb_disable_vbus_error_interrupt()        (OTGIEN  &= ~(1<<VBERRE))
+./cpu/avr/dev/usb/usb_drv.h:#define Is_vbus_error_interrupt_enabled()         ((OTGIEN &  (1<<VBERRE))   ? TRUE : FALSE)
+./cpu/avr/dev/usb/usb_drv.h:#define Usb_ack_vbus_error_interrupt()            (OTGINT  &= ~(1<<VBERRI))
+./cpu/avr/dev/usb/usb_drv.h:#define Is_usb_vbus_error_interrupt()             ((OTGINT &   (1<<VBERRI))  ? TRUE : FALSE)
+./cpu/avr/dev/usb/usb_drv.h:#define Usb_enable_srp_interrupt()                (OTGIEN  |=  (1<<SRPE))
+./cpu/avr/dev/usb/usb_drv.h:#define Usb_disable_srp_interrupt()               (OTGIEN  &= ~(1<<SRPE))
+./cpu/avr/dev/usb/usb_drv.h:#define Is_srp_interrupt_enabled()                ((OTGIEN &  (1<<SRPE))   ? TRUE : FALSE)
+./cpu/avr/dev/usb/usb_drv.h:#define Usb_ack_srp_interrupt()                   (OTGINT  &= ~(1<<SRPI))
+./cpu/avr/dev/usb/usb_drv.h:#define Is_usb_srp_interrupt()                    ((OTGINT &   (1<<SRPI))    ? TRUE : FALSE)
+./cpu/avr/dev/usb/usb_drv.h:   #define Usb_get_device_interrupt()                (UDINT   &   (1<<UDIEN))
+./cpu/avr/dev/usb/usb_drv.h:   #define Usb_ack_all_device_interrupt()            (UDINT   =  ~(1<<UDIEN))
+./cpu/avr/dev/usb/usb_drv.h:   #define Usb_enable_remote_wake_up_interrupt()     (UDIEN   |=  (1<<UPRSME))
+./cpu/avr/dev/usb/usb_drv.h:   #define Usb_disable_remote_wake_up_interrupt()    (UDIEN   &= ~(1<<UPRSME))
+./cpu/avr/dev/usb/usb_drv.h:#define Is_remote_wake_up_interrupt_enabled()     ((UDIEN &  (1<<UPRSME))   ? TRUE : FALSE)
+./cpu/avr/dev/usb/usb_drv.h:#define Usb_enable_resume_interrupt()             (UDIEN   |=  (1<<EORSME))
+./cpu/avr/dev/usb/usb_drv.h:#define Usb_disable_resume_interrupt()            (UDIEN   &= ~(1<<EORSME))
+./cpu/avr/dev/usb/usb_drv.h:#define Is_resume_interrupt_enabled()             ((UDIEN &  (1<<EORSME))   ? TRUE : FALSE)
+./cpu/avr/dev/usb/usb_drv.h:#define Usb_enable_wake_up_interrupt()            (UDIEN   |=  (1<<WAKEUPE))
+./cpu/avr/dev/usb/usb_drv.h:#define Usb_disable_wake_up_interrupt()           (UDIEN   &= ~(1<<WAKEUPE))
+./cpu/avr/dev/usb/usb_drv.h:#define Is_swake_up_interrupt_enabled()           ((UDIEN &  (1<<WAKEUPE))   ? TRUE : FALSE)
+./cpu/avr/dev/usb/usb_drv.h:#define Usb_enable_reset_interrupt()              (UDIEN   |=  (1<<EORSTE))
+./cpu/avr/dev/usb/usb_drv.h:#define Usb_disable_reset_interrupt()             (UDIEN   &= ~(1<<EORSTE))
+./cpu/avr/dev/usb/usb_drv.h:#define Is_reset_interrupt_enabled()              ((UDIEN &  (1<<EORSTE))   ? TRUE : FALSE)
+./cpu/avr/dev/usb/usb_drv.h:#define Usb_enable_sof_interrupt()                (UDIEN   |=  (1<<SOFE))
+./cpu/avr/dev/usb/usb_drv.h:#define Usb_disable_sof_interrupt()               (UDIEN   &= ~(1<<SOFE))
+./cpu/avr/dev/usb/usb_drv.h:#define Is_sof_interrupt_enabled()                ((UDIEN &  (1<<SOFE))   ? TRUE : FALSE)
+./cpu/avr/dev/usb/usb_drv.h:#define Usb_enable_suspend_interrupt()            (UDIEN   |=  (1<<SUSPE))
+./cpu/avr/dev/usb/usb_drv.h:#define Usb_disable_suspend_interrupt()           (UDIEN   &= ~(1<<SUSPE))
+./cpu/avr/dev/usb/usb_drv.h:#define Is_suspend_interrupt_enabled()            ((UDIEN &  (1<<SUSPE))   ? TRUE : FALSE)
+./cpu/avr/dev/usb/usb_drv.h:#define Usb_ack_overflow_interrupt()              (UESTA0X &= ~(1<<OVERFI))
+./cpu/avr/dev/usb/usb_drv.h:#define Usb_ack_underflow_interrupt()             (UESTA0X &= ~(1<<UNDERFI))
+./cpu/avr/dev/usb/usb_drv.h:#define Usb_enable_flow_error_interrupt()         (UEIENX  |=  (1<<FLERRE))
+./cpu/avr/dev/usb/usb_drv.h:#define Usb_enable_nak_in_interrupt()             (UEIENX  |=  (1<<NAKINE))
+./cpu/avr/dev/usb/usb_drv.h:#define Usb_enable_nak_out_interrupt()            (UEIENX  |=  (1<<NAKOUTE))
+./cpu/avr/dev/usb/usb_drv.h:#define Usb_enable_receive_setup_interrupt()      (UEIENX  |=  (1<<RXSTPE))
+./cpu/avr/dev/usb/usb_drv.h:#define Usb_enable_receive_out_interrupt()        (UEIENX  |=  (1<<RXOUTE))
+./cpu/avr/dev/usb/usb_drv.h:#define Usb_enable_stalled_interrupt()            (UEIENX  |=  (1<<STALLEDE))
+./cpu/avr/dev/usb/usb_drv.h:#define Usb_enable_in_ready_interrupt()           (UEIENX  |=  (1<<TXINE))
+./cpu/avr/dev/usb/usb_drv.h:#define Usb_disable_flow_error_interrupt()        (UEIENX  &= ~(1<<FLERRE))
+./cpu/avr/dev/usb/usb_drv.h:#define Usb_disable_nak_in_interrupt()            (UEIENX  &= ~(1<<NAKINE))
+./cpu/avr/dev/usb/usb_drv.h:#define Usb_disable_nak_out_interrupt()           (UEIENX  &= ~(1<<NAKOUTE))
+./cpu/avr/dev/usb/usb_drv.h:#define Usb_disable_receive_setup_interrupt()     (UEIENX  &= ~(1<<RXSTPE))
+./cpu/avr/dev/usb/usb_drv.h:#define Usb_disable_receive_out_interrupt()       (UEIENX  &= ~(1<<RXOUTE))
+./cpu/avr/dev/usb/usb_drv.h:#define Usb_disable_stalled_interrupt()           (UEIENX  &= ~(1<<STALLEDE))
+./cpu/avr/dev/usb/usb_drv.h:#define Usb_disable_in_ready_interrupt()          (UEIENX  &= ~(1<<TXIN))
+./cpu/avr/dev/usb/usb_drv.h:#define Usb_interrupt_flags()                     (UEINT)
+./cpu/avr/dev/usb/usb_drv.h:#define Is_usb_endpoint_event()                   (Usb_interrupt_flags() != 0x00)
+./cpu/avr/dev/usb/usb_drv.h:   #define Host_enable_sof_interrupt()            (UHIEN |= (1<<HSOFE))
+./cpu/avr/dev/usb/usb_drv.h:   #define Host_disable_sof_interrupt()           (UHIEN &= ~(1<<HSOFE))
+./cpu/avr/dev/usb/usb_drv.h:#define Is_host_sof_interrupt_enabled()        ((UHIEN &  (1<<HSOFE))   ? TRUE : FALSE)
+./cpu/avr/dev/usb/usb_drv.h:#define Host_enable_hwup_interrupt()            (UHIEN |= (1<<HWUPE))
+./cpu/avr/dev/usb/usb_drv.h:#define Host_disable_hwup_interrupt()           (UHIEN &= ~(1<<HWUPE))
+./cpu/avr/dev/usb/usb_drv.h:#define Is_host_hwup_interrupt_enabled()        ((UHIEN &  (1<<HWUPE))   ? TRUE : FALSE)
+./cpu/avr/dev/usb/usb_drv.h:#define Host_enable_down_stream_resume_interrupt()            (UHIEN |= (1<<RSMEDE))
+./cpu/avr/dev/usb/usb_drv.h:#define Host_disable_down_stream_resume_interrupt()           (UHIEN &= ~(1<<RSMEDE))
+./cpu/avr/dev/usb/usb_drv.h:#define Is_host_down_stream_resume_interrupt_enabled()        ((UHIEN &  (1<<RSMEDE))   ? TRUE : FALSE)
+./cpu/avr/dev/usb/usb_drv.h:#define Host_enable_remote_wakeup_interrupt()         (UHIEN |= (1<<RXRSME))
+./cpu/avr/dev/usb/usb_drv.h:#define Host_disable_remote_wakeup_interrupt()        (UHIEN &= ~(1<<RXRSME))
+./cpu/avr/dev/usb/usb_drv.h:#define Is_host_remote_wakeup_interrupt_enabled()     ((UHIEN &  (1<<RXRSME))   ? TRUE : FALSE)
+./cpu/avr/dev/usb/usb_drv.h:#define Host_enable_device_connection_interrupt()        (UHIEN |= (1<<DCONNE))
+./cpu/avr/dev/usb/usb_drv.h:#define Host_disable_device_connection_interrupt()    (UHIEN &= ~(1<<DCONNE))
+./cpu/avr/dev/usb/usb_drv.h:#define Is_host_device_connection_interrupt_enabled()    ((UHIEN &  (1<<DCONNE))   ? TRUE : FALSE)
+./cpu/avr/dev/usb/usb_drv.h:#define Host_enable_device_disconnection_interrupt()     (UHIEN |= (1<<DDISCE))
+./cpu/avr/dev/usb/usb_drv.h:#define Host_disable_device_disconnection_interrupt()    (UHIEN &= ~(1<<DDISCE))
+./cpu/avr/dev/usb/usb_drv.h:#define Is_host_device_disconnection_interrupt_enabled() ((UHIEN &  (1<<DDISCE))   ? TRUE : FALSE)
+./cpu/avr/dev/usb/usb_drv.h:#define Host_enable_reset_interrupt()          (UHIEN   |=  (1<<RSTE))
+./cpu/avr/dev/usb/usb_drv.h:#define Host_disable_reset_interrupt()         (UHIEN   &= ~(1<<RSTE))
+./cpu/avr/dev/usb/usb_drv.h:#define Is_host_reset_interrupt_enabled()      ((UHIEN &  (1<<RSTE))   ? TRUE : FALSE)
+./cpu/avr/dev/usb/usb_drv.h:#define Host_get_pipe_interrupt()              (UPINT)
+./cpu/avr/dev/usb/usb_drv.h:#define Host_set_interrupt_frequency(frq)      (UPCFG2X = (U8)frq)
+./cpu/avr/dev/usb/usb_drv.h:#define Host_enable_transmit_interrupt()       (UPIENX |= (1<<TXOUTE))
+./cpu/avr/dev/usb/usb_drv.h:#define Host_disable_transmit_interrupt()      (UPIENX &= ~(1<<TXOUTE))
+./cpu/avr/dev/usb/usb_drv.h:#define Host_enable_receive_interrupt()        (UPIENX |= (1<<RXINE))
+./cpu/avr/dev/usb/usb_drv.h:#define Host_disable_receive_interrupt()       (UPIENX &= ~(1<<RXINE))
+./cpu/avr/dev/usb/usb_drv.h:#define Host_enable_stall_interrupt()        (UPIENX |= (1<<RXSTALLE))
+./cpu/avr/dev/usb/usb_drv.h:#define Host_disable_stall_interrupt()       (UPIENX &= ~(1<<RXSTALLE))
+./cpu/avr/dev/usb/usb_drv.h:#define Host_enable_error_interrupt()        (UPIENX |= (1<<PERRE))
+./cpu/avr/dev/usb/usb_drv.h:#define Host_disable_error_interrupt()       (UPIENX &= ~(1<<PERRE))
+./cpu/avr/dev/usb/usb_drv.h:#define Host_enable_nak_interrupt()        (UPIENX |= (1<<NAKEDE))
+./cpu/avr/dev/usb/usb_drv.h:#define Host_disable_nak_interrupt()       (UPIENX &= ~(1<<NAKEDE))
+./cpu/avr/dev/usb/usb_drv.h:U8      usb_select_enpoint_interrupt (void);
+./cpu/avr/dev/usb/usb_drv.h:U8      usb_get_nb_pipe_interrupt    (void);
+./cpu/avr/dev/usb/rndis/rndis_protocol.h:extern uint8_t schedule_interrupt;
+./cpu/avr/dev/usb/rndis/rndis_protocol.h:void rndis_send_interrupt(void);
+./cpu/avr/dev/usb/rndis/cdc_ecm.c:#if CDC_ECM_USES_INTERRUPT_ENDPOINT
+./cpu/avr/dev/usb/rndis/cdc_ecm.c:#if CDC_ECM_USES_INTERRUPT_ENDPOINT
+./cpu/avr/dev/usb/rndis/cdc_ecm.c:						 TYPE_INTERRUPT,     \
+./cpu/avr/dev/usb/rndis/cdc_ecm.c:#if CDC_ECM_USES_INTERRUPT_ENDPOINT
+./cpu/avr/dev/usb/rndis/cdc_ecm.c:#if CDC_ECM_USES_INTERRUPT_ENDPOINT
+./cpu/avr/dev/usb/rndis/rndis.c:uint8_t schedule_interrupt = 0;
+./cpu/avr/dev/usb/rndis/rndis.c:		rndis_send_interrupt();
+./cpu/avr/dev/usb/rndis/rndis.c:void rndis_send_interrupt(void)
+./cpu/avr/dev/usb/rndis/rndis.c:	schedule_interrupt = 1;	
+./cpu/avr/dev/usb/rndis/rndis.c:						 TYPE_INTERRUPT,     \
+./cpu/avr/dev/usb/rndis/rndis_task.c:				rndis_send_interrupt();
+./cpu/avr/dev/rs232_atmega128rfa1.h:#define USART_INTERRUPT_RX_COMPLETE _BV (RXCIE0)
+./cpu/avr/dev/rs232_atmega128rfa1.h:#define USART_INTERRUPT_TX_COMPLETE _BV (TXCIE0)
+./cpu/avr/dev/rs232_atmega128rfa1.h:#define USART_INTERRUPT_DATA_REG_EMPTY _BV (UDRIE0)
+./cpu/avr/dev/rs232_atmega644.h:#define USART_INTERRUPT_RX_COMPLETE _BV (RXCIE0)
+./cpu/avr/dev/rs232_atmega644.h:#define USART_INTERRUPT_TX_COMPLETE _BV (TXCIE0)
+./cpu/avr/dev/rs232_atmega644.h:#define USART_INTERRUPT_DATA_REG_EMPTY _BV (UDRIE0)
+./cpu/avr/radio/rf230/radio.c:                hal_register_write(RG_IRQ_MASK, RF230_SUPPORTED_INTERRUPT_MASK);
+./cpu/avr/radio/rf230/radio.h:#define RF230_SUPPORTED_INTERRUPT_MASK          ( 0x0C )
+./cpu/avr/radio/rf230/hal.c:    HAL_ENABLE_OVERFLOW_INTERRUPT(); /* Enable Timer1 overflow interrupt. */
+./cpu/avr/radio/rf230/hal.c:    hal_enable_trx_interrupt();    /* Enable interrupts from the radio transceiver. */
+./cpu/avr/radio/rf230/hal.h:#define HAL_ENABLE_RADIO_INTERRUPT( ) { ( EIMSK |= ( 1 << INT5 ) ) ; EICRB |= 0x0C ; PORTE &= ~(1<<PE5);  DDRE &= ~(1<<DDE5); }
+./cpu/avr/radio/rf230/hal.h:#define HAL_DISABLE_RADIO_INTERRUPT( ) ( EIMSK &= ~( 1 << INT5 ) )
+./cpu/avr/radio/rf230/hal.h:#define HAL_ENABLE_RADIO_INTERRUPT( ) ( TIMSK1 |= ( 1 << ICIE1 ) )
+./cpu/avr/radio/rf230/hal.h:#define HAL_DISABLE_RADIO_INTERRUPT( ) ( TIMSK1 &= ~( 1 << ICIE1 ) )
+./cpu/avr/radio/rf230/hal.h:#define HAL_ENABLE_OVERFLOW_INTERRUPT( ) ( TIMSK1 |= ( 1 << TOIE1 ) )
+./cpu/avr/radio/rf230/hal.h:#define HAL_DISABLE_OVERFLOW_INTERRUPT( ) ( TIMSK1 &= ~( 1 << TOIE1 ) )
+./cpu/avr/radio/rf230/hal.h:#define hal_enable_trx_interrupt( ) HAL_ENABLE_RADIO_INTERRUPT( )
+./cpu/avr/radio/rf230/hal.h:#define hal_disable_trx_interrupt( ) HAL_DISABLE_RADIO_INTERRUPT( )
+./cpu/avr/radio/rf230bb/halbb.c: //   HAL_ENABLE_OVERFLOW_INTERRUPT(); /* Enable Timer1 overflow interrupt. */
+./cpu/avr/radio/rf230bb/halbb.c:    hal_enable_trx_interrupt();    /* Enable interrupts from the radio transceiver. */
+./cpu/avr/radio/rf230bb/halbb.c:    HAL_ENABLE_OVERFLOW_INTERRUPT(); /* Enable Timer1 overflow interrupt. */
+./cpu/avr/radio/rf230bb/halbb.c:    hal_enable_trx_interrupt();    /* Enable interrupts from the radio transceiver. */
+./cpu/avr/radio/rf230bb/halbb.c:#define HAL_RF230_ISR() M16C_INTERRUPT(M16C_INT1)
+./cpu/avr/radio/rf230bb/halbb.c:#define HAL_TIME_ISR()  M16C_INTERRUPT(M16C_TMRB4)
+./cpu/avr/radio/rf230bb/halbb.c:    HAL_ENABLE_OVERFLOW_INTERRUPT(); /* Enable Timer overflow interrupt. */
+./cpu/avr/radio/rf230bb/halbb.c:    hal_enable_trx_interrupt();    /* Enable interrupts from the radio transceiver. */
+./cpu/avr/radio/rf230bb/halbb.c:void rf230_interrupt(void);
+./cpu/avr/radio/rf230bb/halbb.c:/* Buffer the frame and call rf230_interrupt to schedule poll for rf230 receive process */
+./cpu/avr/radio/rf230bb/halbb.c:		rf230_interrupt();
+./cpu/avr/radio/rf230bb/halbb.c:extern volatile uint8_t rf230_interruptwait,rf230_ccawait;
+./cpu/avr/radio/rf230bb/halbb.c:	rf230_interruptwait=0;
+./cpu/avr/radio/rf230bb/halbb.c:	rf230_interruptwait=0;
+./cpu/avr/radio/rf230bb/halbb.c:       /* Buffer the frame and call rf230_interrupt to schedule poll for rf230 receive process */
+./cpu/avr/radio/rf230bb/halbb.c:         rf230_interrupt();
+./cpu/avr/radio/rf230bb/hal.h:#define HAL_ENABLE_RADIO_INTERRUPT( ) { ( EIMSK |= ( 1 << INT5 ) ) ; EICRB |= 0x0C ; PORTE &= ~(1<<PE5);  DDRE &= ~(1<<DDE5); }
+./cpu/avr/radio/rf230bb/hal.h:#define HAL_DISABLE_RADIO_INTERRUPT( ) ( EIMSK &= ~( 1 << INT5 ) )
+./cpu/avr/radio/rf230bb/hal.h:#define HAL_ENABLE_RADIO_INTERRUPT( ) ( TIMSK1 |= ( 1 << ICIE1 ) )
+./cpu/avr/radio/rf230bb/hal.h:#define HAL_DISABLE_RADIO_INTERRUPT( ) ( TIMSK1 &= ~( 1 << ICIE1 ) )
+./cpu/avr/radio/rf230bb/hal.h:#define HAL_ENABLE_OVERFLOW_INTERRUPT( ) ( TIMSK1 |= ( 1 << TOIE1 ) )
+./cpu/avr/radio/rf230bb/hal.h:#define HAL_DISABLE_OVERFLOW_INTERRUPT( ) ( TIMSK1 &= ~( 1 << TOIE1 ) )
+./cpu/avr/radio/rf230bb/hal.h:#define HAL_ENABLE_RADIO_INTERRUPT( ) ( INT1IC.BYTE |= 1 )
+./cpu/avr/radio/rf230bb/hal.h:#define HAL_DISABLE_RADIO_INTERRUPT( ) ( INT1IC.BYTE &= ~(1) )
+./cpu/avr/radio/rf230bb/hal.h:#define HAL_ENABLE_OVERFLOW_INTERRUPT( ) ( TB4IC.BYTE = 1 )
+./cpu/avr/radio/rf230bb/hal.h:#define HAL_DISABLE_OVERFLOW_INTERRUPT( ) ( TB4IC.BYTE = 0 )
+./cpu/avr/radio/rf230bb/hal.h:#define hal_enable_trx_interrupt( ) HAL_ENABLE_RADIO_INTERRUPT( )
+./cpu/avr/radio/rf230bb/hal.h:#define hal_disable_trx_interrupt( ) HAL_DISABLE_RADIO_INTERRUPT( )
+./cpu/avr/radio/rf230bb/rf230bb.h:#define RF230_SUPPORTED_INTERRUPT_MASK          ( 0xFF )
+./cpu/avr/radio/rf230bb/rf230bb.h://#define RF230_SUPPORTED_INTERRUPT_MASK        ( 0x08 )  //enable trx end only
+./cpu/avr/radio/rf230bb/rf230bb.h://#define RF230_SUPPORTED_INTERRUPT_MASK          ( 0x0F ) //disable bat low, trx underrun
+./cpu/avr/radio/rf230bb/rf230bb.h:#define RF230_SUPPORTED_INTERRUPT_MASK          ( 0x0C )  //disable bat low, trx underrun, pll lock/unlock
+./cpu/avr/radio/rf230bb/rf230bb.c:volatile uint8_t rf230_interruptwait,rf230_ccawait;
+./cpu/avr/radio/rf230bb/rf230bb.c:    rf230_interruptwait=1;
+./cpu/avr/radio/rf230bb/rf230bb.c:    while (rf230_interruptwait) {}
+./cpu/avr/radio/rf230bb/rf230bb.c:  hal_register_write(RG_IRQ_MASK, RF230_SUPPORTED_INTERRUPT_MASK);
+./cpu/avr/radio/rf230bb/rf230bb.c:	rf230_interruptwait=1;
+./cpu/avr/radio/rf230bb/rf230bb.c://	while (rf230_interruptwait) {}	
+./cpu/avr/radio/rf230bb/rf230bb.c:        if (!rf230_interruptwait) break;
+./cpu/avr/radio/rf230bb/rf230bb.c:rf230_interrupt(void)
+./cpu/avr/radio/rf230bb/rf230bb.c:  if (rxframe[rxframe_head].length) rf230_interrupt();
+./cpu/avr/cc2420_spi.c:ISR(SIG_INTERRUPT0)
+./cpu/mc1322x/doc/ws-dis:00402c44 <MACA_Interrupt>:
+./cpu/mc1322x/doc/ws-dis:  402c46:	485b      	ldr	r0, [pc, #364]	(402db4 <??MACA_Interrupt_1>)
+./cpu/mc1322x/doc/ws-dis:  402c4c:	4f5a      	ldr	r7, [pc, #360]	(402db8 <??MACA_Interrupt_1+0x4>)
+./cpu/mc1322x/doc/ws-dis:  402c5a:	d005      	beq.n	402c68 <??MACA_Interrupt_2>
+./cpu/mc1322x/doc/ws-dis:  402c5c:	4e57      	ldr	r6, [pc, #348]	(402dbc <??MACA_Interrupt_1+0x8>)
+./cpu/mc1322x/doc/ws-dis:00402c62 <??MACA_Interrupt_3>:
+./cpu/mc1322x/doc/ws-dis:  402c66:	e09c      	b.n	402da2 <??MACA_Interrupt_4>
+./cpu/mc1322x/doc/ws-dis:00402c68 <??MACA_Interrupt_2>:
+./cpu/mc1322x/doc/ws-dis:  402c6a:	d552      	bpl.n	402d12 <??MACA_Interrupt_5>
+./cpu/mc1322x/doc/ws-dis:  402c6c:	4e53      	ldr	r6, [pc, #332]	(402dbc <??MACA_Interrupt_1+0x8>)
+./cpu/mc1322x/doc/ws-dis:  402c84:	d900      	bls.n	402c88 <??MACA_Interrupt_2+0x20>
+./cpu/mc1322x/doc/ws-dis:  402c86:	e08c      	b.n	402da2 <??MACA_Interrupt_4>
+./cpu/mc1322x/doc/ws-dis:  402c88:	a101      	add	r1, pc, #4	(adr r1, 402c90 <??MACA_Interrupt_0>)
+./cpu/mc1322x/doc/ws-dis:00402c90 <??MACA_Interrupt_0>:
+./cpu/mc1322x/doc/ws-dis:00402ca0 <??MACA_Interrupt_6>:
+./cpu/mc1322x/doc/ws-dis:  402cac:	e079      	b.n	402da2 <??MACA_Interrupt_4>
+./cpu/mc1322x/doc/ws-dis:00402cae <??MACA_Interrupt_7>:
+./cpu/mc1322x/doc/ws-dis:  402cb6:	e7d4      	b.n	402c62 <??MACA_Interrupt_3>
+./cpu/mc1322x/doc/ws-dis:00402cb8 <??MACA_Interrupt_8>:
+./cpu/mc1322x/doc/ws-dis:00402cbc <??MACA_Interrupt_9>:
+./cpu/mc1322x/doc/ws-dis:  402cc0:	e06f      	b.n	402da2 <??MACA_Interrupt_4>
+./cpu/mc1322x/doc/ws-dis:00402cc2 <??MACA_Interrupt_10>:
+./cpu/mc1322x/doc/ws-dis:  402cc6:	e7cc      	b.n	402c62 <??MACA_Interrupt_3>
+./cpu/mc1322x/doc/ws-dis:00402cc8 <??MACA_Interrupt_11>:
+./cpu/mc1322x/doc/ws-dis:  402cd0:	e065      	b.n	402d9e <??MACA_Interrupt_12>
+./cpu/mc1322x/doc/ws-dis:00402cd2 <??MACA_Interrupt_13>:
+./cpu/mc1322x/doc/ws-dis:  402cda:	e7c2      	b.n	402c62 <??MACA_Interrupt_3>
+./cpu/mc1322x/doc/ws-dis:00402cdc <??MACA_Interrupt_14>:
+./cpu/mc1322x/doc/ws-dis:  402ce6:	d005      	beq.n	402cf4 <??MACA_Interrupt_15>
+./cpu/mc1322x/doc/ws-dis:00402cf4 <??MACA_Interrupt_15>:
+./cpu/mc1322x/doc/ws-dis:  402cfa:	e052      	b.n	402da2 <??MACA_Interrupt_4>
+./cpu/mc1322x/doc/ws-dis:00402cfc <??MACA_Interrupt_16>:
+./cpu/mc1322x/doc/ws-dis:  402d00:	e7af      	b.n	402c62 <??MACA_Interrupt_3>
+./cpu/mc1322x/doc/ws-dis:00402d02 <??MACA_Interrupt_17>:
+./cpu/mc1322x/doc/ws-dis:  402d0a:	e7d7      	b.n	402cbc <??MACA_Interrupt_9>
+./cpu/mc1322x/doc/ws-dis:00402d0c <??MACA_Interrupt_18>:
+./cpu/mc1322x/doc/ws-dis:  402d10:	e7a7      	b.n	402c62 <??MACA_Interrupt_3>
+./cpu/mc1322x/doc/ws-dis:00402d12 <??MACA_Interrupt_5>:
+./cpu/mc1322x/doc/ws-dis:  402d12:	482b      	ldr	r0, [pc, #172]	(402dc0 <??MACA_Interrupt_1+0xc>)
+./cpu/mc1322x/doc/ws-dis:  402d1a:	d105      	bne.n	402d28 <??MACA_Interrupt_19>
+./cpu/mc1322x/doc/ws-dis:  402d1c:	4e27      	ldr	r6, [pc, #156]	(402dbc <??MACA_Interrupt_1+0x8>)
+./cpu/mc1322x/doc/ws-dis:  402d26:	e03a      	b.n	402d9e <??MACA_Interrupt_12>
+./cpu/mc1322x/doc/ws-dis:00402d28 <??MACA_Interrupt_19>:
+./cpu/mc1322x/doc/ws-dis:  402d2c:	d01c      	beq.n	402d68 <??MACA_Interrupt_20>
+./cpu/mc1322x/doc/ws-dis:  402d30:	4924      	ldr	r1, [pc, #144]	(402dc4 <??MACA_Interrupt_1+0x10>)
+./cpu/mc1322x/doc/ws-dis:  402d3a:	d109      	bne.n	402d50 <??MACA_Interrupt_21>
+./cpu/mc1322x/doc/ws-dis:  402d44:	d10c      	bne.n	402d60 <??MACA_Interrupt_22>
+./cpu/mc1322x/doc/ws-dis:  402d4e:	d107      	bne.n	402d60 <??MACA_Interrupt_22>
+./cpu/mc1322x/doc/ws-dis:00402d50 <??MACA_Interrupt_21>:
+./cpu/mc1322x/doc/ws-dis:  402d50:	4e1a      	ldr	r6, [pc, #104]	(402dbc <??MACA_Interrupt_1+0x8>)
+./cpu/mc1322x/doc/ws-dis:  402d5e:	e020      	b.n	402da2 <??MACA_Interrupt_4>
+./cpu/mc1322x/doc/ws-dis:00402d60 <??MACA_Interrupt_22>:
+./cpu/mc1322x/doc/ws-dis:  402d60:	4e16      	ldr	r6, [pc, #88]	(402dbc <??MACA_Interrupt_1+0x8>)
+./cpu/mc1322x/doc/ws-dis:  402d66:	e77c      	b.n	402c62 <??MACA_Interrupt_3>
+./cpu/mc1322x/doc/ws-dis:00402d68 <??MACA_Interrupt_20>:
+./cpu/mc1322x/doc/ws-dis:  402d6a:	d505      	bpl.n	402d78 <??MACA_Interrupt_23>
+./cpu/mc1322x/doc/ws-dis:  402d70:	4e12      	ldr	r6, [pc, #72]	(402dbc <??MACA_Interrupt_1+0x8>)
+./cpu/mc1322x/doc/ws-dis:  402d76:	e7a1      	b.n	402cbc <??MACA_Interrupt_9>
+./cpu/mc1322x/doc/ws-dis:00402d78 <??MACA_Interrupt_23>:
+./cpu/mc1322x/doc/ws-dis:  402d7c:	d003      	beq.n	402d86 <??MACA_Interrupt_24>
+./cpu/mc1322x/doc/ws-dis:  402d7e:	4e0f      	ldr	r6, [pc, #60]	(402dbc <??MACA_Interrupt_1+0x8>)
+./cpu/mc1322x/doc/ws-dis:  402d84:	e76d      	b.n	402c62 <??MACA_Interrupt_3>
+./cpu/mc1322x/doc/ws-dis:00402d86 <??MACA_Interrupt_24>:
+./cpu/mc1322x/doc/ws-dis:  402d8c:	d004      	beq.n	402d98 <??MACA_Interrupt_25>
+./cpu/mc1322x/doc/ws-dis:  402d8e:	4e0b      	ldr	r6, [pc, #44]	(402dbc <??MACA_Interrupt_1+0x8>)
+./cpu/mc1322x/doc/ws-dis:  402d96:	e004      	b.n	402da2 <??MACA_Interrupt_4>
+./cpu/mc1322x/doc/ws-dis:00402d98 <??MACA_Interrupt_25>:
+./cpu/mc1322x/doc/ws-dis:  402d9c:	d001      	beq.n	402da2 <??MACA_Interrupt_4>
+./cpu/mc1322x/doc/ws-dis:00402d9e <??MACA_Interrupt_12>:
+./cpu/mc1322x/doc/ws-dis:00402da2 <??MACA_Interrupt_4>:
+./cpu/mc1322x/doc/ws-dis:00402db4 <??MACA_Interrupt_1>:
+./cpu/mc1322x/lib/adc.c:#define ADC_USE_INTERRUPTS 0 // incomplete support
+./cpu/mc1322x/lib/adc.c:#if ADC_USE_INTERRUPTS
+./cpu/mc1322x/lib/include/isr.h:#define __INTERRUPT_union(x)		  \
+./cpu/mc1322x/lib/include/isr.h:	__INTERRUPT_union(INTENABLE);
+./cpu/mc1322x/lib/include/isr.h:	__INTERRUPT_union(INTTYPE);
+./cpu/mc1322x/lib/include/isr.h:	__INTERRUPT_union(INTSRC);
+./cpu/mc1322x/lib/include/isr.h:	__INTERRUPT_union(INTFRC);
+./cpu/mc1322x/lib/include/isr.h:	__INTERRUPT_union(NIPEND);
+./cpu/mc1322x/lib/include/isr.h:	__INTERRUPT_union(FIPEND);
+./cpu/mc1322x/lib/include/isr.h:#undef __INTERRUPT_union
+./cpu/msp430/f5xxx/uart0.c:ISR(USCI_A0, uart0_rx_interrupt)
+./cpu/msp430/f5xxx/uart1.c:ISR(USCI_A1, uart1_rx_interrupt)
+./cpu/msp430/f2xxx/uart0.c:#ifdef UART0_CONF_TX_WITH_INTERRUPT
+./cpu/msp430/f2xxx/uart0.c:#define TX_WITH_INTERRUPT UART0_CONF_TX_WITH_INTERRUPT
+./cpu/msp430/f2xxx/uart0.c:#else /* UART0_CONF_TX_WITH_INTERRUPT */
+./cpu/msp430/f2xxx/uart0.c:#define TX_WITH_INTERRUPT 1
+./cpu/msp430/f2xxx/uart0.c:#endif /* UART0_CONF_TX_WITH_INTERRUPT */
+./cpu/msp430/f2xxx/uart0.c:#if TX_WITH_INTERRUPT
+./cpu/msp430/f2xxx/uart0.c:#endif /* TX_WITH_INTERRUPT */
+./cpu/msp430/f2xxx/uart0.c:#if TX_WITH_INTERRUPT
+./cpu/msp430/f2xxx/uart0.c:#else /* TX_WITH_INTERRUPT */
+./cpu/msp430/f2xxx/uart0.c:#endif /* TX_WITH_INTERRUPT */
+./cpu/msp430/f2xxx/uart0.c:  /* Enable USCI_A0 TX interrupts (if TX_WITH_INTERRUPT enabled) */
+./cpu/msp430/f2xxx/uart0.c:#if TX_WITH_INTERRUPT
+./cpu/msp430/f2xxx/uart0.c:#endif /* TX_WITH_INTERRUPT */
+./cpu/msp430/f2xxx/uart0.c:ISR(USCIAB0RX, uart0_rx_interrupt)
+./cpu/msp430/f2xxx/uart0.c:#if TX_WITH_INTERRUPT
+./cpu/msp430/f2xxx/uart0.c:ISR(USCIAB0TX, uart0_tx_interrupt)
+./cpu/msp430/f2xxx/uart0.c:#endif /* TX_WITH_INTERRUPT */
+./cpu/msp430/f2xxx/uart1.c:#ifdef UART1_CONF_TX_WITH_INTERRUPT
+./cpu/msp430/f2xxx/uart1.c:#define TX_WITH_INTERRUPT UART1_CONF_TX_WITH_INTERRUPT
+./cpu/msp430/f2xxx/uart1.c:#else /* UART1_CONF_TX_WITH_INTERRUPT */
+./cpu/msp430/f2xxx/uart1.c:#define TX_WITH_INTERRUPT 1
+./cpu/msp430/f2xxx/uart1.c:#endif /* UART1_CONF_TX_WITH_INTERRUPT */
+./cpu/msp430/f2xxx/uart1.c:#if TX_WITH_INTERRUPT
+./cpu/msp430/f2xxx/uart1.c:#endif /* TX_WITH_INTERRUPT */
+./cpu/msp430/f2xxx/uart1.c:#if TX_WITH_INTERRUPT
+./cpu/msp430/f2xxx/uart1.c:#else /* TX_WITH_INTERRUPT */
+./cpu/msp430/f2xxx/uart1.c:#endif /* TX_WITH_INTERRUPT */
+./cpu/msp430/f2xxx/uart1.c:ISR(USCIAB1RX, uart1_rx_interrupt)
+./cpu/msp430/f2xxx/uart1.c:#if TX_WITH_INTERRUPT
+./cpu/msp430/f2xxx/uart1.c:ISR(USCIAB1TX, uart1_tx_interrupt)
+./cpu/msp430/f2xxx/uart1.c:#endif /* TX_WITH_INTERRUPT */
+./cpu/msp430/watchdog.c:ISR(WDT, watchdog_interrupt)
+./cpu/msp430/msp430def.h:#define dint() __disable_interrupt()
+./cpu/msp430/msp430def.h:#define eint() __enable_interrupt()
+./cpu/msp430/cc2520-arch.c:ISR(CC2520_IRQ, cc2520_port1_interrupt)
+./cpu/msp430/cc2520-arch.c:  if(cc2520_interrupt()) {
+./cpu/msp430/cc2420-arch.c:ISR(CC2420_IRQ, cc2420_port1_interrupt)
+./cpu/msp430/cc2420-arch.c:  if(cc2420_interrupt()) {
+./cpu/msp430/f1xxx/uart1.c:#ifdef UART1_CONF_TX_WITH_INTERRUPT
+./cpu/msp430/f1xxx/uart1.c:#define TX_WITH_INTERRUPT UART1_CONF_TX_WITH_INTERRUPT
+./cpu/msp430/f1xxx/uart1.c:#else /* UART1_CONF_TX_WITH_INTERRUPT */
+./cpu/msp430/f1xxx/uart1.c:#define TX_WITH_INTERRUPT 0
+./cpu/msp430/f1xxx/uart1.c:#endif /* UART1_CONF_TX_WITH_INTERRUPT */
+./cpu/msp430/f1xxx/uart1.c:#if TX_WITH_INTERRUPT
+./cpu/msp430/f1xxx/uart1.c:#endif /* TX_WITH_INTERRUPT */
+./cpu/msp430/f1xxx/uart1.c:#if TX_WITH_INTERRUPT
+./cpu/msp430/f1xxx/uart1.c:#else /* TX_WITH_INTERRUPT */
+./cpu/msp430/f1xxx/uart1.c:#endif /* TX_WITH_INTERRUPT */
+./cpu/msp430/f1xxx/uart1.c:#if TX_WITH_INTERRUPT
+./cpu/msp430/f1xxx/uart1.c:#endif /* TX_WITH_INTERRUPT */
+./cpu/msp430/f1xxx/uart1.c:ISR(UART1RX, uart1_rx_interrupt)
+./cpu/msp430/f1xxx/uart1.c:#if TX_WITH_INTERRUPT
+./cpu/msp430/f1xxx/uart1.c:ISR(UART1TX, uart1_tx_interrupt)
+./cpu/msp430/f1xxx/uart1.c:#endif /* TX_WITH_INTERRUPT */
+./cpu/msp430/cc2520-arch-sfd.c:ISR(TIMERB1, cc2520_timerb1_interrupt)
+./cpu/msp430/cc2420-arch-sfd.c:ISR(TIMERB1, cc2420_timerb1_interrupt)
+./cpu/msp430/button.c:ISR(PORT2, __button_interrupt)
+./cpu/msp430/isr_compat.h:#define ISR(a,b) void _INTERRUPT[a ## _VECTOR] b(void)
+./cpu/msp430/isr_compat.h:__interrupt void b(void)
+./cpu/msp430/isr_compat.h:#define ISR(a,b) void b __interrupt[a ## _VECTOR](void)
+./cpu/msp430/isr_compat.h:#define ISR(a,b) __interrupt void b(void); \
+./cpu/msp430/isr_compat.h:__interrupt void b(void)
+./cpu/stm32w108/hal/error-def.h:#define ST_SLEEP_INTERRUPTED(0x85)
+./cpu/stm32w108/hal/error-def.h:DEFINE_ERROR(SLEEP_INTERRUPTED, 0x85)
+./cpu/stm32w108/hal/micro/cortexm3/system-timer.c:      status = ST_SLEEP_INTERRUPTED;
+./cpu/stm32w108/hal/micro/cortexm3/compiler/iar.h:#define DECLARE_INTERRUPT_STATE_LITE DECLARE_INTERRUPT_STATE
+./cpu/stm32w108/hal/micro/cortexm3/compiler/iar.h:#define DISABLE_INTERRUPTS_LITE() DISABLE_INTERRUPTS()
+./cpu/stm32w108/hal/micro/cortexm3/compiler/iar.h:#define RESTORE_INTERRUPTS_LITE() RESTORE_INTERRUPTS()
+./cpu/stm32w108/hal/micro/cortexm3/compiler/iar.h:    #define DECLARE_INTERRUPT_STATE
+./cpu/stm32w108/hal/micro/cortexm3/compiler/iar.h:    #define DISABLE_INTERRUPTS() do { } while(0)
+./cpu/stm32w108/hal/micro/cortexm3/compiler/iar.h:    #define RESTORE_INTERRUPTS() do { } while(0)
+./cpu/stm32w108/hal/micro/cortexm3/compiler/iar.h:    #define HANDLE_PENDING_INTERRUPTS() do { } while(0)
+./cpu/stm32w108/hal/micro/cortexm3/compiler/iar.h:       * declarations section of any function which calls DISABLE_INTERRUPTS()
+./cpu/stm32w108/hal/micro/cortexm3/compiler/iar.h:       * or RESTORE_INTERRUPTS().
+./cpu/stm32w108/hal/micro/cortexm3/compiler/iar.h:      #define DECLARE_INTERRUPT_STATE int8u _emIsrState
+./cpu/stm32w108/hal/micro/cortexm3/compiler/iar.h:   * later restored with RESTORE_INTERRUPTS().
+./cpu/stm32w108/hal/micro/cortexm3/compiler/iar.h:   * \note Do not fail to call RESTORE_INTERRUPTS().
+./cpu/stm32w108/hal/micro/cortexm3/compiler/iar.h:  #define DISABLE_INTERRUPTS()                    \
+./cpu/stm32w108/hal/micro/cortexm3/compiler/iar.h:   * DISABLE_INTERRUPTS()
+./cpu/stm32w108/hal/micro/cortexm3/compiler/iar.h:   * \note Do not call without having first called DISABLE_INTERRUPTS()
+./cpu/stm32w108/hal/micro/cortexm3/compiler/iar.h:  #define RESTORE_INTERRUPTS()      \
+./cpu/stm32w108/hal/micro/cortexm3/compiler/iar.h:   * ::DISABLE_INTERRUPTS() was called.
+./cpu/stm32w108/hal/micro/cortexm3/compiler/iar.h:    DECLARE_INTERRUPT_STATE;   \
+./cpu/stm32w108/hal/micro/cortexm3/compiler/iar.h:    DISABLE_INTERRUPTS();      \
+./cpu/stm32w108/hal/micro/cortexm3/compiler/iar.h:    RESTORE_INTERRUPTS();      \
+./cpu/stm32w108/hal/micro/cortexm3/compiler/iar.h:  #define HANDLE_PENDING_INTERRUPTS() \
+./cpu/stm32w108/hal/micro/cortexm3/compiler/gnu.h:#define DECLARE_INTERRUPT_STATE_LITE DECLARE_INTERRUPT_STATE
+./cpu/stm32w108/hal/micro/cortexm3/compiler/gnu.h:#define DISABLE_INTERRUPTS_LITE() DISABLE_INTERRUPTS()
+./cpu/stm32w108/hal/micro/cortexm3/compiler/gnu.h:#define RESTORE_INTERRUPTS_LITE() RESTORE_INTERRUPTS()
+./cpu/stm32w108/hal/micro/cortexm3/compiler/gnu.h:    #define DECLARE_INTERRUPT_STATE
+./cpu/stm32w108/hal/micro/cortexm3/compiler/gnu.h:    #define DISABLE_INTERRUPTS() do { } while(0)
+./cpu/stm32w108/hal/micro/cortexm3/compiler/gnu.h:    #define RESTORE_INTERRUPTS() do { } while(0)
+./cpu/stm32w108/hal/micro/cortexm3/compiler/gnu.h:    #define HANDLE_PENDING_INTERRUPTS() do { } while(0)
+./cpu/stm32w108/hal/micro/cortexm3/compiler/gnu.h:       * declarations section of any function which calls DISABLE_INTERRUPTS()
+./cpu/stm32w108/hal/micro/cortexm3/compiler/gnu.h:       * or RESTORE_INTERRUPTS().
+./cpu/stm32w108/hal/micro/cortexm3/compiler/gnu.h:      #define DECLARE_INTERRUPT_STATE int8u _emIsrState
+./cpu/stm32w108/hal/micro/cortexm3/compiler/gnu.h:   * later restored with RESTORE_INTERRUPTS().
+./cpu/stm32w108/hal/micro/cortexm3/compiler/gnu.h:   * \note Do not fail to call RESTORE_INTERRUPTS().
+./cpu/stm32w108/hal/micro/cortexm3/compiler/gnu.h:  #define DISABLE_INTERRUPTS()                    \
+./cpu/stm32w108/hal/micro/cortexm3/compiler/gnu.h:   * DISABLE_INTERRUPTS()
+./cpu/stm32w108/hal/micro/cortexm3/compiler/gnu.h:   * \note Do not call without having first called DISABLE_INTERRUPTS()
+./cpu/stm32w108/hal/micro/cortexm3/compiler/gnu.h:  #define RESTORE_INTERRUPTS()      \
+./cpu/stm32w108/hal/micro/cortexm3/compiler/gnu.h:   * ::DISABLE_INTERRUPTS() was called.
+./cpu/stm32w108/hal/micro/cortexm3/compiler/gnu.h:    DECLARE_INTERRUPT_STATE;   \
+./cpu/stm32w108/hal/micro/cortexm3/compiler/gnu.h:    DISABLE_INTERRUPTS();      \
+./cpu/stm32w108/hal/micro/cortexm3/compiler/gnu.h:    RESTORE_INTERRUPTS();      \
+./cpu/stm32w108/hal/micro/cortexm3/compiler/gnu.h:  #define HANDLE_PENDING_INTERRUPTS() \
+./cpu/stm32w108/hal/micro/cortexm3/micro-common.h: * ::ST_SLEEP_INTERRUPTED and the duration parameter reports the amount of
+./cpu/stm32w108/hal/micro/cortexm3/stm32w108/crt_stm32w108.c:void Reset_Handler(void) __attribute__((__interrupt__));
+./cpu/stm32w108/hal/micro/cortexm3/stm32w108/crt_stm32w108.c:  // NOTE: The ATOMIC and DISABLE_INTERRUPTS macros work by setting the 
+./cpu/stm32w108/hal/micro/cortexm3/stm32w108/low_level_init.c:  // NOTE: The ATOMIC and DISABLE_INTERRUPTS macros work by setting the 
+./cpu/stm32w108/hal/micro/cortexm3/stm32w108/regs.h:#define BLOCK_INTERRUPTS_BASE                                (0x4000A000u)
+./cpu/stm32w108/hal/micro/cortexm3/stm32w108/regs.h:#define BLOCK_INTERRUPTS_END                                 (0x4000A86Cu)
+./cpu/stm32w108/hal/micro/cortexm3/stm32w108/regs.h:#define BLOCK_INTERRUPTS_SIZE                                (BLOCK_INTERRUPTS_END - BLOCK_INTERRUPTS_BASE + 1)
+./cpu/stm32w108/dev/uart1.c:#ifdef UART1_CONF_TX_WITH_INTERRUPT
+./cpu/stm32w108/dev/uart1.c:#define TX_WITH_INTERRUPT UART1_CONF_TX_WITH_INTERRUPT
+./cpu/stm32w108/dev/uart1.c:#else /* UART1_CONF_TX_WITH_INTERRUPT */
+./cpu/stm32w108/dev/uart1.c:#define TX_WITH_INTERRUPT 1
+./cpu/stm32w108/dev/uart1.c:#endif /* UART1_CONF_TX_WITH_INTERRUPT */
+./cpu/stm32w108/dev/uart1.c:#if TX_WITH_INTERRUPT
+./cpu/stm32w108/dev/uart1.c:#endif /* TX_WITH_INTERRUPT */
+./cpu/stm32w108/dev/uart1.c:#if TX_WITH_INTERRUPT
+./cpu/stm32w108/dev/uart1.c:#else /* TX_WITH_INTERRUPT */
+./cpu/stm32w108/dev/uart1.c:#endif /* TX_WITH_INTERRUPT */
+./cpu/stm32w108/dev/uart1.c:#if TX_WITH_INTERRUPT
+./cpu/stm32w108/dev/uart1.c:#endif /* TX_WITH_INTERRUPT */ 
+./cpu/stm32w108/dev/uart1.c:void uart1_rx_interrupt(void);
+./cpu/stm32w108/dev/uart1.c:void uart1_tx_interrupt(void);
+./cpu/stm32w108/dev/uart1.c:    uart1_rx_interrupt();
+./cpu/stm32w108/dev/uart1.c:  #if TX_WITH_INTERRUPT
+./cpu/stm32w108/dev/uart1.c:    uart1_tx_interrupt();
+./cpu/stm32w108/dev/uart1.c:  #endif /* TX_WITH_INTERRUPT */
+./cpu/stm32w108/dev/uart1.c:void uart1_rx_interrupt(void)
+./cpu/stm32w108/dev/uart1.c:#if TX_WITH_INTERRUPT
+./cpu/stm32w108/dev/uart1.c:void uart1_tx_interrupt(void)
+./cpu/stm32w108/dev/uart1.c:#endif /* TX_WITH_INTERRUPT */
+Binary file ./cpu/stm32w108/simplemac/library/simplemac-library-gnu.a matches
+./cpu/cc253x/rtimer-arch.c:rtimer_isr(void) __interrupt(T1_VECTOR)
+./cpu/cc253x/rtimer-arch.h:void rtimer_isr(void) __interrupt(T1_VECTOR);
+./cpu/cc253x/dev/watchdog.c:  DISABLE_INTERRUPTS();
+./cpu/cc253x/dev/dma.h:void dma_isr( void ) __interrupt (DMA_VECTOR);
+./cpu/cc253x/dev/clock-isr.h:void clock_isr(void) __interrupt(ST_VECTOR);
+./cpu/cc253x/dev/uart0.h:void uart0_rx_isr( void ) __interrupt (URX0_VECTOR);
+./cpu/cc253x/dev/uart-intr.c:uart0_rx_isr(void) __interrupt (URX0_VECTOR)
+./cpu/cc253x/dev/uart-intr.c:uart1_rx_isr(void) __interrupt (URX1_VECTOR)
+./cpu/cc253x/dev/uart1.h:void uart1_rx_isr( void ) __interrupt (URX1_VECTOR);
+./cpu/cc253x/dev/clock.c:  DISABLE_INTERRUPTS();
+./cpu/cc253x/dev/clock.c:  ENABLE_INTERRUPTS();
+./cpu/cc253x/dev/clock.c:clock_isr(void) __interrupt(ST_VECTOR)
+./cpu/cc253x/dev/clock.c:  DISABLE_INTERRUPTS();
+./cpu/cc253x/dev/clock.c:  ENABLE_INTERRUPTS();
+./cpu/cc253x/dev/dma_intr.c:dma_isr(void) __interrupt (DMA_VECTOR)
+./cpu/cc253x/8051def.h:#define __interrupt(x)
+./cpu/cc253x/8051def.h:#define DISABLE_INTERRUPTS()  do {EA = 0;} while(0)
+./cpu/cc253x/8051def.h:#define ENABLE_INTERRUPTS()   do {EA = 1;} while(0)
+./cpu/cc253x/soc.c:  ENABLE_INTERRUPTS();
+./cpu/arm/at91sam7s/rtimer-arch.c:  AT91C_AIC_SVR[RTIMER_ARCH_TIMER_ID] =  (unsigned long)rtimer_interrupt;
+./cpu/arm/at91sam7s/usb-interrupt.h:#ifndef __USB_INTERRUPT_H__0HRIPZ5SIA__
+./cpu/arm/at91sam7s/usb-interrupt.h:#define __USB_INTERRUPT_H__0HRIPZ5SIA__
+./cpu/arm/at91sam7s/usb-interrupt.h:#endif /* __USB_INTERRUPT_H__0HRIPZ5SIA__ */
+./cpu/arm/at91sam7s/sys-interrupt.c:sys_interrupt_enable()
+./cpu/arm/at91sam7s/sys-interrupt.c:sys_interrupt_disable()
+./cpu/arm/at91sam7s/sys-interrupt.c:sys_interrupt_append_handler(SystemInterruptHandler *handler)
+./cpu/arm/at91sam7s/sys-interrupt.c:sys_interrupt_prepend_handler(SystemInterruptHandler *handler)
+./cpu/arm/at91sam7s/sys-interrupt.c:sys_interrupt_remove_handler(SystemInterruptHandler *handler)
+./cpu/arm/at91sam7s/rtimer-arch-interrupt.h:#ifndef __RTIMER_ARCH_INTERRUPT_H__P0PXG70757__
+./cpu/arm/at91sam7s/rtimer-arch-interrupt.h:#define __RTIMER_ARCH_INTERRUPT_H__P0PXG70757__
+./cpu/arm/at91sam7s/rtimer-arch-interrupt.h:void rtimer_interrupt (void);
+./cpu/arm/at91sam7s/rtimer-arch-interrupt.h:#endif /* __RTIMER_ARCH_INTERRUPT_H__P0PXG70757__ */
+./cpu/arm/at91sam7s/usb-arch.c:#define USB_EP_FLAGS_TYPE_INTERRUPT 0x03
+./cpu/arm/at91sam7s/usb-arch.c:  /* Enable usb_interrupt */
+./cpu/arm/at91sam7s/usb-arch.c:usb_arch_setup_interrupt_endpoint(unsigned char addr)
+./cpu/arm/at91sam7s/usb-arch.c:  case USB_EP_FLAGS_TYPE_INTERRUPT:
+./cpu/arm/at91sam7s/debug-uart.c:  sys_interrupt_append_handler(&dbg_recv_handler);
+./cpu/arm/at91sam7s/debug-uart.c:  sys_interrupt_enable();
+./cpu/arm/at91sam7s/clock.c:  sys_interrupt_append_handler(&pit_handler);
+./cpu/arm/at91sam7s/clock.c:  sys_interrupt_enable();
+./cpu/arm/at91sam7s/rtimer-arch-interrupt.c:rtimer_interrupt (void) {
+./cpu/arm/at91sam7s/sys-interrupt.h:#ifndef __SYS_INTERRUPT_H__QIHZ66NP8K__
+./cpu/arm/at91sam7s/sys-interrupt.h:#define __SYS_INTERRUPT_H__QIHZ66NP8K__
+./cpu/arm/at91sam7s/sys-interrupt.h:sys_interrupt_enable();
+./cpu/arm/at91sam7s/sys-interrupt.h:sys_interrupt_disable();
+./cpu/arm/at91sam7s/sys-interrupt.h:sys_interrupt_append_handler(SystemInterruptHandler *handler);
+./cpu/arm/at91sam7s/sys-interrupt.h:sys_interrupt_prepend_handler(SystemInterruptHandler *handler);
+./cpu/arm/at91sam7s/sys-interrupt.h:sys_interrupt_remove_handler(SystemInterruptHandler *handler);
+./cpu/arm/at91sam7s/sys-interrupt.h:#endif /* __SYS_INTERRUPT_H__QIHZ66NP8K__ */
+./cpu/arm/common/usb/usb-core.c:usb_setup_interrupt_endpoint(unsigned char addr)
+./cpu/arm/common/usb/usb-core.c:  usb_arch_setup_interrupt_endpoint(addr);
+./cpu/arm/common/usb/cdc-eth/cdc-eth.c:	    usb_setup_interrupt_endpoint(INTERRUPT_IN);
+./cpu/arm/common/usb/usb-arch.h:usb_arch_setup_interrupt_endpoint(uint8_t addr);
+./cpu/arm/common/usb/usb-api.h:usb_setup_interrupt_endpoint(uint8_t addr);
+./cpu/arm/stm32f103/usb-arch.c:#define USB_EPxR_EP_TYPE_INTERRUPT (USB_EP0R_EP_TYPE_1|USB_EP0R_EP_TYPE_0)
+./cpu/arm/stm32f103/usb-arch.c:#define USB_EP_FLAGS_TYPE_INTERRUPT 0x03
+./cpu/arm/stm32f103/usb-arch.c:#define IS_INTERRUPT_EP(ep) IS_EP_TYPE(ep, USB_EP_FLAGS_TYPE_INTERRUPT)
+./cpu/arm/stm32f103/usb-arch.c:usb_arch_setup_interrupt_endpoint(unsigned char addr)
+./cpu/arm/stm32f103/usb-arch.c:  ep->flags |= USB_EP_FLAGS_TYPE_INTERRUPT;
+./cpu/arm/stm32f103/usb-arch.c:	 | USB_EPxR_EP_TYPE_INTERRUPT);
+./cpu/arm/stm32f103/usb-arch.c:  case USB_EP_FLAGS_TYPE_INTERRUPT:
+./cpu/arm/stm32f103/usb-arch.c:  case USB_EP_FLAGS_TYPE_INTERRUPT:
+./cpu/arm/stm32f103/usb-arch.c:  case USB_EP_FLAGS_TYPE_INTERRUPT:
+./cpu/arm/stm32f103/usb-arch.c:    if (!(ep->addr & 0x80) && (IS_BULK_EP(ep) || IS_INTERRUPT_EP(ep))) {
+Binary file ./tools/sky/python23.dll matches
+Binary file ./tools/cooja/apps/avrora/lib/avrora-small.jar matches
+Binary file ./tools/collect-view/dist/tools/cygwin1.dll matches
+Binary file ./tools/collect-view/dist/tools/python23.dll matches
+Binary file ./tools/cygwin/cygwin1.dll matches
+Binary file ./tools/stm32w/stm32w_flasher/python26.dll matches
+Binary file ./tools/stm32w/stm32w_flasher/stm32w_flasher.exe matches
+./platform/mb851/platform-conf.h:#define UART1_CONF_TX_WITH_INTERRUPT    0
+./platform/exp5438/watchdog.c:ISR(WDT, watchdog_interrupt)
+./platform/exp5438/cc2420-arch.c:ISR(CC2420_IRQ, cc24240_fifop_interrupt)
+./platform/exp5438/cc2420-arch.c:    if(cc2420_interrupt()) {
+./platform/exp5438/uart1x.c:ISR(USCI_A1, uart1_rx_interrupt)
+./platform/z1sp/contiki-conf.h:#define UART0_CONF_TX_WITH_INTERRUPT 0 // So far, printfs without interrupt.
+./platform/sky/checkpoint-arch.c:#if UART1_CONF_TX_WITH_INTERRUPT
+./platform/sky/checkpoint-arch.c:#error TX_WITH_INTERRUPTS must be 0
+./platform/sky/checkpoint-arch.c:#endif /* UART1_CONF_TX_WITH_INTERRUPT */
+./platform/sky/checkpoint-arch.c:serial_interrupt_checkpoint()
+./platform/sky/checkpoint-arch.c:serial_interrupt_rollback()
+./platform/sky/checkpoint-arch.c:serial_interrupt_metrics()
+./platform/sky/checkpoint-arch.c:      serial_interrupt_checkpoint();
+./platform/sky/checkpoint-arch.c:      serial_interrupt_rollback();
+./platform/sky/checkpoint-arch.c:      serial_interrupt_metrics();
+./platform/z1/dev/cc2420-arch.c:ISR(CC2420_IRQ, cc24240_port1_interrupt)
+./platform/z1/dev/cc2420-arch.c:  if(cc2420_interrupt()) {
+./platform/z1/dev/i2cmaster.c:#if I2C_RX_WITH_INTERRUPT
+./platform/z1/dev/i2cmaster.c:#if I2C_RX_WITH_INTERRUPT
+./platform/z1/dev/i2cmaster.c:ISR(USCIAB1TX, i2c_tx_interrupt)
+./platform/z1/dev/i2cmaster.c:#if I2C_RX_WITH_INTERRUPT
+./platform/z1/dev/i2cmaster.c:ISR(USCIAB1RX, i2c_rx_interrupt)
+./platform/z1/dev/i2cmaster.h:#ifdef I2C_CONF_RX_WITH_INTERRUPT
+./platform/z1/dev/i2cmaster.h:#define I2C_RX_WITH_INTERRUPT I2C_CONF_RX_WITH_INTERRUPT // XXX Move I2C_CONF_RX_WITH_INTERRUPT to contiki-conf.h or platform-conf.h
+./platform/z1/dev/i2cmaster.h:#else /* I2C_CONF_RX_WITH_INTERRUPT */
+./platform/z1/dev/i2cmaster.h:#define I2C_RX_WITH_INTERRUPT 1
+./platform/z1/dev/i2cmaster.h:#endif /* I2C_CONF_RX_WITH_INTERRUPT */
+./platform/z1/dev/adxl345.c:    if(cc2420_interrupt()) {
+./platform/z1/contiki-conf.h:#define UART0_CONF_TX_WITH_INTERRUPT 0 // So far, printfs without interrupt.
+./platform/sensinode/dev/button-sensor.c:port_0_ISR(void) __interrupt (P0INT_VECTOR)
+./platform/sensinode/dev/button-sensor.c:port_1_ISR(void) __interrupt (P1INT_VECTOR)
+./platform/sensinode/dev/sensinode-sensors.h:void port_0_ISR(void) __interrupt (P0INT_VECTOR);
+./platform/sensinode/dev/sensinode-sensors.h:void port_1_ISR(void) __interrupt (P1INT_VECTOR);
+./platform/sensinode/dev/n740.c:  DISABLE_INTERRUPTS();
+./platform/sensinode/dev/n740.c:  ENABLE_INTERRUPTS();
+./platform/sensinode/dev/n740.c:  DISABLE_INTERRUPTS();
+./platform/sensinode/dev/n740.c:  ENABLE_INTERRUPTS();
+./platform/sensinode/contiki-sensinode-main.c:    DISABLE_INTERRUPTS();
+./platform/sensinode/contiki-sensinode-main.c:    ENABLE_INTERRUPTS();
+./platform/micaz/dev/cc2420-arch.c:  cc2420_interrupt();
+./platform/avr-raven/contiki-conf.h:#define RTIMER_CONF_NESTED_INTERRUPTS 1
+./platform/avr-raven/contiki-raven-main.c:extern uint8_t rf230_interrupt_flag;
+./platform/avr-raven/contiki-raven-main.c:    if (rf230_interrupt_flag) {
+./platform/avr-raven/contiki-raven-main.c: //   if (rf230_interrupt_flag!=11) {
+./platform/avr-raven/contiki-raven-main.c:        PRINTF("**RI%u",rf230_interrupt_flag);
+./platform/avr-raven/contiki-raven-main.c:      rf230_interrupt_flag=0;
+./platform/cc2530dk/dev/button-sensor.c:port_1_isr(void) __interrupt(P1INT_VECTOR)
+./platform/cc2530dk/dev/button-sensor.c:port_0_isr(void) __interrupt(P0INT_VECTOR)
+./platform/cc2530dk/dev/button-sensor.h:void port_1_isr(void) __interrupt(P1INT_VECTOR);
+./platform/cc2530dk/dev/button-sensor.h:void port_0_isr(void) __interrupt(P0INT_VECTOR);
+./platform/cc2530dk/contiki-main.c:  DISABLE_INTERRUPTS();
+./platform/cc2530dk/contiki-main.c:  ENABLE_INTERRUPTS();
+./platform/atari/atari.cfg:label = __INTERRUPTOR_TABLE__,
+./platform/atari/atari.cfg:count = __INTERRUPTOR_COUNT__;
+./platform/stepper-robot/cc2420-interrupt.c:cc2420_fifop_interrupt (void) /* System Interrupt Handler */ 
+./platform/stepper-robot/cc2420-interrupt.c:  cc2420_interrupt();
+./platform/stepper-robot/cc2420-interrupt.c:cc2420_interrupt_fifop_int_init(void)
+./platform/stepper-robot/cc2420-interrupt.c:  AT91C_AIC_SVR[AT91C_ID_IRQ1] = (unsigned long)cc2420_fifop_interrupt;
+./platform/stepper-robot/stepper/stepper-interrupt.c:void NACKEDFUNC stepper_timer_interrupt (void) {
+./platform/stepper-robot/stepper/stepper-interrupt.h:#ifndef __STEPPER3_INTERRUPT_H__2MHD6D6PQ1__
+./platform/stepper-robot/stepper/stepper-interrupt.h:#define __STEPPER3_INTERRUPT_H__2MHD6D6PQ1__
+./platform/stepper-robot/stepper/stepper-interrupt.h:#endif /* __STEPPER3_INTERRUPT_H__2MHD6D6PQ1__ */
+./platform/stepper-robot/stepper/stepper-interrupt.h:void stepper_timer_interrupt(void);
+./platform/stepper-robot/stepper/stepper.c:  AT91C_AIC_SVR[id] =  (unsigned long)stepper_timer_interrupt;
+./platform/stepper-robot/cc2420-interrupt.h:#ifndef __CC2420_CORE_INTERRUPT_H__9499CTDNSK__
+./platform/stepper-robot/cc2420-interrupt.h:#define __CC2420_CORE_INTERRUPT_H__9499CTDNSK__
+./platform/stepper-robot/cc2420-interrupt.h:cc2420_interrupt_fifop_int_init(void);
+./platform/stepper-robot/cc2420-interrupt.h:#endif /* __CC2420_CORE_INTERRUPT_H__9499CTDNSK__ */
+./platform/stepper-robot/gateway/gateway.c:	  usb_setup_interrupt_endpoint(0x83,interrupt_buffer,
+./platform/stepper-robot/contiki-conf.h:#define FIFOP_INT_INIT() cc2420_interrupt_fifop_int_init()
+./platform/mbxxx/platform-conf.h:#define UART1_CONF_TX_WITH_INTERRUPT    0
+./platform/avr-atmega128rfa1/contiki-main.c:extern uint8_t rf230_interrupt_flag;
+./platform/avr-atmega128rfa1/contiki-main.c:    if (rf230_interrupt_flag) {
+./platform/avr-atmega128rfa1/contiki-main.c: //   if (rf230_interrupt_flag!=11) {
+./platform/avr-atmega128rfa1/contiki-main.c:        PRINTF("**RI%u",rf230_interrupt_flag);
+./platform/avr-atmega128rfa1/contiki-main.c:      rf230_interrupt_flag=0;
+./platform/avr-atmega128rfa1/contiki-conf.h:#define RTIMER_CONF_NESTED_INTERRUPTS 1
+Binary file ./projects/grad-desc-localization-test/grad-desc-localization-test.sky matches
+Binary file ./projects/trilateration-loc/trilateration-loc.sky matches
+Binary file ./projects/trilateration-loc/contiki-sky.a matches
+Binary file ./projects/trilateration-loc/obj_sky/cc2420-arch-sfd.o matches
+Binary file ./projects/trilateration-loc/obj_sky/cc2420.o matches
+Binary file ./projects/trilateration-loc/obj_sky/cc2420-arch.o matches
+Binary file ./projects/trilateration-loc/obj_sky/watchdog.o matches
+./projects/trilateration-loc/contiki-sky.map: .text.cc2420_interrupt
+./projects/trilateration-loc/contiki-sky.map:                0x0000b258                cc2420_interrupt
+./projects/trilateration-loc/contiki-sky.map: .text.cc2420_port1_interrupt
+./projects/trilateration-loc/contiki-sky.map:                0x0000b4c6                cc2420_port1_interrupt
+./projects/trilateration-loc/contiki-sky.map: .text.watchdog_interrupt
+./projects/trilateration-loc/contiki-sky.map:                0x0000bc0c                watchdog_interrupt
+Binary file ./projects/test-project/contiki-sky.a matches
+Binary file ./projects/test-project/test-project.sky matches
+Binary file ./projects/test-project/obj_sky/cc2420-arch-sfd.o matches
+Binary file ./projects/test-project/obj_sky/cc2420.o matches
+Binary file ./projects/test-project/obj_sky/cc2420-arch.o matches
+Binary file ./projects/test-project/obj_sky/watchdog.o matches
+./projects/test-project/contiki-sky.map: .text.cc2420_interrupt
+./projects/test-project/contiki-sky.map:                0x0000aea2                cc2420_interrupt
+./projects/test-project/contiki-sky.map: .text.cc2420_port1_interrupt
+./projects/test-project/contiki-sky.map:                0x0000b110                cc2420_port1_interrupt
+./projects/test-project/contiki-sky.map: .text.watchdog_interrupt
+./projects/test-project/contiki-sky.map:                0x0000b856                watchdog_interrupt
+Binary file ./projects/adaptive-cusum/adaptive-cusum.sky matches
+Binary file ./projects/hello-world/hello-world.sky matches
+Binary file ./projects/rr-test/rr-test.sky matches
+Binary file ./projects/noshell-hello-world/say-hi.sky matches
+Binary file ./projects/gaussian-cusum/gaussian-cusum.sky matches
+Binary file ./examples/sky-ip/sky-telnet-server.sky matches
+Binary file ./examples/sky-ip/sky-webserver.sky matches
+Binary file ./examples/sky-ip/telnet-tweet.sky matches
+Binary file ./examples/sky/sky-collect.sky matches
+Binary file ./examples/ipv6/rpl-collect/udp-sender.sky matches
+Binary file ./examples/ipv6/rpl-collect/udp-sink.sky matches
+Binary file ./examples/esb/burn-nodeid.esb matches
+Binary file ./examples/collect/collect-view-shell.sky matches
+Binary file ./examples/collect/contiki-sky.a matches
+Binary file ./examples/collect/obj_sky/cc2420-arch-sfd.o matches
+Binary file ./examples/collect/obj_sky/cc2420.o matches
+Binary file ./examples/collect/obj_sky/cc2420-arch.o matches
+Binary file ./examples/collect/obj_sky/watchdog.o matches
+./examples/collect/contiki-sky.map: .text.cc2420_interrupt
+./examples/collect/contiki-sky.map:                0x0000aeca                cc2420_interrupt
+./examples/collect/contiki-sky.map: .text.cc2420_port1_interrupt
+./examples/collect/contiki-sky.map:                0x0000b138                cc2420_port1_interrupt
+./examples/collect/contiki-sky.map: .text.watchdog_interrupt
+./examples/collect/contiki-sky.map:                0x0000b87e                watchdog_interrupt
+./core/dev/cc2420.h:int cc2420_interrupt(void);
+./core/dev/cc2420.c:cc2420_interrupt(void)
+./core/dev/cc2520.c:cc2520_interrupt(void)
+./core/dev/cc2520.h:int cc2520_interrupt(void);
