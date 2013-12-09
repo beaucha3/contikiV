@@ -41,7 +41,7 @@
 #include "contiki.h"
 #include "net/rime.h"
 
-#define TX 1
+#define TX 0
 #define MY_CHANNEL 130
 
 //#include "dev/button-sensor.h"

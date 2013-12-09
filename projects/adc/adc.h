@@ -14,10 +14,6 @@
 #include <string.h>
 
 
-
-
-
-
 #endif /* _ADC_H_ */
 
 
