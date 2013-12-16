@@ -13,11 +13,11 @@
 #define MY_CHANNEL 130
 #define RESULT_STR_LEN 128
 
-#define SAMPLE_FREQ 16
+#define SAMPLE_FREQ 8   // Each sample takes 16 chars
 
 static unsigned int results[3];
-static char result_str[RESULT_STR_LEN] = {'\0'};
-static int result_len = 0;
+static char result_str[RESULT_STR_LEN-1] = {'\0'};
+static uint16_t result_len = 0;
 
 
 PROCESS(main_process, "main");
@@ -45,7 +45,7 @@ PROCESS_THREAD(main_process, ev, data)
    */
   P6SEL = 0x07;                             // Enable A/D channel inputs
   ADC12CTL0 = ADC12ON+MSC+SHT0_5;           // Turn on ADC12, set sampling time
-  ADC12CTL1 = CONSEQ_1;                     // Sequence of channels
+  ADC12CTL1 = CONSEQ_1 + SHP;               // Sequence of channels
   ADC12MCTL0 = INCH_0;                      // ref+=AVcc, channel = A0
   ADC12MCTL1 = INCH_1;                      // ref+=AVcc, channel = A1
   ADC12MCTL2 = INCH_2+EOS;                  // ref+=AVcc, channel = A2, end seq.
@@ -62,16 +62,25 @@ PROCESS_THREAD(main_process, ev, data)
     // Only sample data every 1/SAMPLE_FREQ seconds
     if( pause )
     {
-      etimer_set(&et, CLOCK_SECOND / SAMPLE_FREQ );
+      etimer_set(&et, CLOCK_SECOND / (2*SAMPLE_FREQ) );
       PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
       ADC12CTL0 |= ADC12SC;                   // Sampling open
     }
     else
     {
-      packetbuf_copyfrom( result_str, result_len+1 );
-      //       puts("----------------");
-      puts(result_str);
       
+      //       puts("----------------");
+//      puts(result_str);
+//       printf("%d %d %s\n", 
+//              result_len, 
+//              packetbuf_copyfrom( result_str, result_len+16 ),
+//              result_str);
+      /*
+       * I don't know why we need result_len+16, but without it, the 
+       * buffer gets truncated, and packetbuf_copyfrom returns len-15,
+       * which it really shouldn't be doing.
+       */
+      packetbuf_copyfrom( result_str, result_len+16 );
       broadcast_send(&broadcast);
       result_str[0] = 0;
       result_len = 0;
@@ -92,7 +101,7 @@ __interrupt void ADC12_ISR (void)
   char str[16];
   int len;
   
-  putchar('I');
+//  putchar('I');
   
   results[0] = ADC12MEM0;                   // Move results, IFG is cleared
   results[1] = ADC12MEM1;                   // Move results, IFG is cleared
