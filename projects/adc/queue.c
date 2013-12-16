@@ -30,7 +30,8 @@ qnode_t* enqueue( qnode_t** head, qnode_t** tail, int val )
       else
       {
         // Start new list
-        
+        (*head) = n;
+        (*tail) = n;
       }
     }
   }
@@ -42,10 +43,34 @@ qnode_t* enqueue( qnode_t** head, qnode_t** tail, int val )
  * Removes a node from the head of the queue and
  * returns its value.
  */
-int dequeue( qnode_t* head, qnode_t* tail )
+int dequeue( qnode_t** head, qnode_t** tail )
 {
+  int retval = 0;
+  qnode_t* newhead;
   
+  if( head != NULL && tail != NULL &&
+     *head != NULL &&*tail != NULL )
+  {
+    retval = (*head)->value;
+    
+    if( (*tail) == (*head) )
+    {
+      // Only one node, remove it.
+      free( *head );
+      
+      (*head) = NULL;
+      (*tail) = NULL;
+    }
+    else
+    {
+      newhead = (*head)->next;
+      newhead->prev = NULL;
+      free(*head);
+      (*head) = newhead;
+    }
+  }
   
+  return retval;
 }
 
 /*
@@ -53,6 +78,10 @@ int dequeue( qnode_t* head, qnode_t* tail )
  */
 int peek( qnode_t* head )
 {
+  int retval = 0;
   
+  if( head != NULL )
+    retval = head->value;
   
+  return retval;  
 }

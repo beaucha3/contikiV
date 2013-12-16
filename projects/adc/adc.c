@@ -9,16 +9,26 @@
 #include <stdio.h>
 #include <string.h>
 #include "net/rime.h"
+#include "dev/leds.h"
+//#include "dev/button-sensor.h"
 
 #define MY_CHANNEL 130
 #define RESULT_STR_LEN 128
 
 #define SAMPLE_FREQ 8   // Each sample takes 16 chars
 
-static unsigned int results[3];
+/*
+ * Global variables
+ */
 static char result_str[RESULT_STR_LEN-1] = {'\0'};
 static uint16_t result_len = 0;
+static uint16_t results[3];
+static int16_t cdata[3] = {0, 0, 0};              // Calibration constants
 
+/*
+ * Local functions.
+ */
+void calibrate_accel();
 
 PROCESS(main_process, "main");
 AUTOSTART_PROCESSES(&main_process);
@@ -36,6 +46,7 @@ static struct broadcast_conn broadcast;
 PROCESS_THREAD(main_process, ev, data)
 {
   static int pause = 1;
+  static struct etimer et;
   
   PROCESS_EXITHANDLER(broadcast_close(&broadcast);)
   PROCESS_BEGIN();
@@ -43,6 +54,7 @@ PROCESS_THREAD(main_process, ev, data)
   /*
    * Set up ADC, copied from CCS example
    */
+//  WDTCTL = WDTPW+WDTHOLD;                   // Stop watchdog timer
   P6SEL = 0x07;                             // Enable A/D channel inputs
   ADC12CTL0 = ADC12ON+MSC+SHT0_5;           // Turn on ADC12, set sampling time
   ADC12CTL1 = CONSEQ_1 + SHP;               // Sequence of channels
@@ -55,10 +67,20 @@ PROCESS_THREAD(main_process, ev, data)
   broadcast_open(&broadcast, MY_CHANNEL, &broadcast_call);
   //ADC12CTL0 |= ADC12SC;                   // Sampling open
   
+  // Calibrate accelerometer.  Wait a second before we do
+  etimer_set(&et, CLOCK_SECOND );
+  PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+  
+  calibrate_accel();
+  
+  // Light up LED's to signify that calibration is complete.
+  leds_on(LEDS_ALL);
+  etimer_set(&et, CLOCK_SECOND/2);
+  PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+  leds_off(LEDS_ALL);
+  
   while(1)
   {
-    static struct etimer et;
-    
     // Only sample data every 1/SAMPLE_FREQ seconds
     if( pause )
     {
@@ -94,18 +116,63 @@ PROCESS_THREAD(main_process, ev, data)
   PROCESS_END();
 }
 
+/*
+ * Takes 16 samples, assumed to be in the resting position, and sets the calibration 
+ * factors for each dimension.
+ */
+void calibrate_accel()
+{
+  static int i, j;
+  static int16_t my_cdata[3];
+  
+  ADC12CTL0 |= ADC12SC;                   // Sampling open
+  
+  for( j=0; j<3; j++ )
+  {
+    my_cdata[j] = 0;
+  }
+  
+  // Don't overflow an int_16t!
+  // Worst case is results[j] = +/- 2048.
+  for( i=0; i<16; i++ )
+  {
+    while( ADC12CTL1 & ADC12BUSY );
+    
+    for( j=0; j<3; j++ )
+    {
+      my_cdata[j] += (results[j] - 2048);
+    }
+    
+//    printf("%d, %d, %d\n", results[0], results[1], results[2]);
+    ADC12CTL0 |= ADC12SC;                   // Sampling open
+  }
+  
+  // Divide calibration data by 16 and copy to global cdata
+  for( j=0; j<3; j++ )
+  {
+    cdata[j] = my_cdata[j] >> 4;
+  }
+//   printf("%d, %d, %d\n", cdata[0], cdata[1], cdata[2]);
+}
+
 // ADC12 interrupt service routine
 #pragma vector=ADC12_VECTOR
 __interrupt void ADC12_ISR (void)
 {
   char str[16];
-  int len;
+  int len, i;
   
 //  putchar('I');
   
   results[0] = ADC12MEM0;                   // Move results, IFG is cleared
   results[1] = ADC12MEM1;                   // Move results, IFG is cleared
   results[2] = ADC12MEM2;                   // Move results, IFG is cleared
+  
+  // Apply calibrations
+  for( i=0; i<3; i++ )
+  {
+    results[i] -= cdata[i];
+  }
   
   len = sprintf(str, "%.4d,%.4d,%.4d\n", 
                 results[0], results[1], results[2]);
