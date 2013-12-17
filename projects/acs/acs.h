@@ -8,11 +8,6 @@
 #ifndef _ADC_H_
 #define _ADC_H_
 
-#include "contiki.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
 
 #endif /* _ADC_H_ */
 
