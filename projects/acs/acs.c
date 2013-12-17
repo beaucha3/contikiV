@@ -50,6 +50,7 @@ static int16_t cdata[3] = {0, 0, 0};              // Calibration constants
  * Local functions.
  */
 void calibrate_accel();
+uint32_t isqrt( uint32_t a );
 
 PROCESS(main_process, "main");
 AUTOSTART_PROCESSES(&main_process);
@@ -73,7 +74,7 @@ PROCESS_THREAD(main_process, ev, data)
   int len;
   
   static int32_t Wn = 0;      // Significant statistic
-  uint16_t mag;               // Magnitude of acceleration
+  uint32_t mag;               // Magnitude of acceleration
   
   PROCESS_EXITHANDLER(broadcast_close(&broadcast);)
   PROCESS_BEGIN();
@@ -122,7 +123,8 @@ PROCESS_THREAD(main_process, ev, data)
             results[2]*results[2];
       
       // Take the square root of mag - which may be as high as 3*(2^24).
-      // Currently, I can't do this, I'll need to look at my Crenshaw book
+      mag = isqrt( mag );
+            
       
       // Update significant statistic
       Wn += LOG_S0_S1 + (((mag - MU0)*(mag - MU0)) << 11)/SIG0
@@ -213,6 +215,33 @@ void calibrate_accel()
     cdata[j] = my_cdata[j] >> 4;
   }
 //   printf("%d, %d, %d\n", cdata[0], cdata[1], cdata[2]);
+}
+
+/*
+ * Integer square root, from Jack W. Crenshaw
+ */
+uint32_t isqrt( uint32_t a )
+{
+  uint32_t rem = 0;
+  uint32_t root = 0;
+  uint32_t divisor = 0;
+  int i;
+  
+  for( i=0; i<16; i++ )
+  {
+    root <<= 1;
+    rem = ((rem << 2) + (a >> 30));
+    a <<= 2;
+    divisor = (root << 1) + 1;
+    
+    if( divisor <= rem)
+    {
+      rem -= divisor;
+      root++;
+    }
+  }
+  
+  return root;
 }
 
 // ADC12 interrupt service routine
