@@ -1,8 +1,8 @@
 /*
  * adc.h
  * 
- * Attempt to use the A/D converter on the expansion port and report
- * the value to the shell.
+ * Use the A/D converter on the expansion port and broadcast
+ * the value of the accelerometer.
  */
 
 #include "adc.h"

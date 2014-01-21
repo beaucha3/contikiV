@@ -97,6 +97,7 @@ static void
 broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)
 {
 	node_received_string = (char *)packetbuf_dataptr();
+  //printf("node_received_string=%p\n", node_received_string);
 	process_start(&node_read_process, NULL);
 }
 

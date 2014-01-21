@@ -114,7 +114,7 @@ PROCESS_THREAD(sleepy_cusum_process, ev, data)
 	static uint16_t sensor_value = 0;
 	static int16_t timeValue;
 	int post_term = qlog(mypow2(std_dev_1)/mypow2(std_dev_0))+(mypow2(std_dev_0)+mypow2(mean_1 - mean_0))/(2*mypow2(std_dev_1));
-	MU_VALUE = (post_term)/50;
+	MU_VALUE = (post_term)/50; // /50;
 	if(MU_VALUE<10) {
 		MU_VALUE = 10;
 	}
@@ -142,7 +142,7 @@ PROCESS_THREAD(sleepy_cusum_process, ev, data)
 		// Take a reading.
 		sensor_value = light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC);
 
-		post_term = mypow2(sensor_value-mean_1)/(2*mypow2(std_dev_1));	
+		post_term = mypow2(sensor_value-mean_1)/(2*mypow2(std_dev_1));
 		int pre_term = mypow2(sensor_value-mean_0)/(2*mypow2(std_dev_0));
 		//printf("post_term = %d\npre_term = %d\n", post_term, pre_term);	
 
@@ -163,7 +163,7 @@ PROCESS_THREAD(sleepy_cusum_process, ev, data)
 		if (pre_term == 32767)
 			S_n = 32767;
 		//printf("z_k = %d\nS_n = %d\n", z_k, S_n);
-		printf("Obs = %d S_n = %d\n", sensor_value, S_n);
+    printf("Obs = %d S_n = %d MU = %d\n", sensor_value, S_n, MU_VALUE);
 
 		if (S_n >= b) {
 			// If our statistic is larger than threshold...
@@ -197,7 +197,7 @@ PROCESS_THREAD(sleepy_cusum_process, ev, data)
 
 				// Tell Matlab the new stat.
 				S_n = S_n + MU_VALUE;
-				printf("Obs = 0 S_n = %d\n", S_n);
+        printf("Obs = 0 S_n = %d Mu = %d\n", S_n, MU_VALUE);
 			}
 			sleep = 0;
 			SENSORS_ACTIVATE(light_sensor);

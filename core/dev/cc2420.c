@@ -28,12 +28,11 @@
  *
  * This file is part of the Contiki operating system.
  *
- * @(#)$Id: cc2420.c,v 1.63 2011/01/09 21:09:28 adamdunkels Exp $
  */
 /*
  * This code is almost device independent and should be easy to port.
  */
-#include <stdio.h>
+
 #include <string.h>
 
 #include "contiki.h"
@@ -168,22 +167,11 @@ static void
 getrxdata(void *buf, int len)
 {
   CC2420_READ_FIFO_BUF(buf, len);
-  //Note, the below is for debugging.
-/*  int i = 0;
-  char *buffer = (char *)buf;
-  printf("Character buffer: ");
-  for (i = 0; i < len; i++)
-    printf("%c", buffer[i]);
-  printf("\n");
-  printf("Length of buffer: %d\n", len);
-*/
 }
 static void
 getrxbyte(uint8_t *byte)
 {
   CC2420_READ_FIFO_BYTE(*byte);
-  //Note, the below is for debugging.
-  //printf("Byte value = %d\n", *byte);
 }
 static void
 flushrx(void)

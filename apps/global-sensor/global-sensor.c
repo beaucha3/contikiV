@@ -16,7 +16,7 @@
 #include <ctype.h>
 
 
-#define SENSOR_CHANNEL 133
+//#define SENSOR_CHANNEL 133 - now included in dan_protocol.h
 #define SENSOR_INIT_DIV 10
 
 #define DEBUG
@@ -134,14 +134,16 @@ PROCESS_THREAD( sensor_set_dispatcher, ev, data )
 PROCESS_THREAD( sensor_set, ev, data )
 {
   PROCESS_BEGIN();
+  /*
+   * Data packet is in the form
+   * [command] [sensor] [addr0] [addr1] [data]
+   */
 
-  unsigned char cmd[7];
+  unsigned char *cmd = (unsigned char *)data;
   unsigned char a0, a1;
 
   a0 = (unsigned char)(rimeaddr_node_addr.u8[0]);
   a1 = (unsigned char)(rimeaddr_node_addr.u8[1]);
-
-  parse_shell_command( (unsigned char*)data, cmd );
 
   #ifdef DEBUG
   printf("Addr: %d.%d\n", cmd[2], cmd[3]);
@@ -150,7 +152,7 @@ PROCESS_THREAD( sensor_set, ev, data )
 
   if( (cmd[2] == a0 && cmd[3] == a1) ||
     (cmd[2] == 0  || cmd[3] == 0 ) )
-    sensor_init( ((char*)data)[1] );
+    sensor_init( cmd[1] );
 
   PROCESS_END();
 }
@@ -159,17 +161,15 @@ PROCESS_THREAD( sensor_unset, ev, data )
 {
   PROCESS_BEGIN();
 
-  unsigned char cmd[7];
+  unsigned char *cmd = (unsigned char *)data;
   unsigned char a0, a1;
 
   a0 = (unsigned char)(rimeaddr_node_addr.u8[0]);
   a1 = (unsigned char)(rimeaddr_node_addr.u8[1]);
 
-  parse_shell_command( (unsigned char*)data, cmd );
-
   if( (cmd[2] == a0 && cmd[3] == a1) ||
     (cmd[2] == 0  || cmd[3] == 0 ) )
-    sensor_uinit( ((char*)data)[1] );
+    sensor_uinit( cmd[1] );
 
   PROCESS_END();
 }
@@ -177,15 +177,13 @@ PROCESS_THREAD( sensor_unset, ev, data )
 PROCESS_THREAD( sensor_read_proc, ev, data )
 {
   PROCESS_BEGIN();
-  unsigned char cmd[7];
+  unsigned char *cmd = (unsigned char *)data;
   char my_data[7];
   uint16_t reading = sensor_read();
   unsigned char a0, a1;
 
   a0 = (unsigned char)(rimeaddr_node_addr.u8[0]);
   a1 = (unsigned char)(rimeaddr_node_addr.u8[1]);
-
-  parse_shell_command( (unsigned char*)data, cmd );
 
   if( (cmd[2] == a0 && cmd[3] == a1) ||
       (cmd[2] == 0  || cmd[3] == 0 ) )
@@ -202,12 +200,20 @@ PROCESS_THREAD( sensor_read_proc, ev, data )
     my_data[6] = '\0';
 
 #ifdef DEBUG
-    printf("Reading %d.%d:%i\n", cmd[2], cmd[3], reading);
+    printf("Reading %d.%d:%i\n", a0, a1, reading);
 #endif
 
     // Broadcast data
     packetbuf_copyfrom(my_data, 7);
     broadcast_send(&broadcast);
+
+#ifdef DEBUG
+    int i;
+    printf("Sending ");
+    for( i=0; i<7; i++ )
+      printf("%d ",my_data[i]);
+    printf("\n");
+#endif
   }
 
   PROCESS_END();
@@ -218,6 +224,10 @@ PROCESS_THREAD( sensor_print_data, ev, data )
   PROCESS_BEGIN();
   uint16_t reading = 0;
   char* d = (char*)data;
+
+#ifdef DEBUG
+  printf( "Data: %p\n", data );
+#endif
 
   reading = d[4];
   reading = reading << 8;
