@@ -1,8 +1,13 @@
 /*
- * adc.h
+ * acs.c
  * 
  * Use the A/D converter on the expansion port and broadcast
  * the value of the accelerometer.
+ * 
+ * When the mote is reset, it immediately calibrates the accelerometer so each
+ * axis has a reading of 2048 from the ADC means no acceleration.  The 
+ * calibration is finished when the all the LED's flash on for half a second.
+ * After calibration is finished, the change detection algorithm starts.
  */
 
 #include "acs.h"
@@ -30,13 +35,13 @@
  * Parameters for CuSum
  */
 #define PREC      11      // Bit shift for precesion (11 = 2048)
-#define MU0       3547    // Mean of pre-change (rest) distribution
+#define MU0       3547    // Mean of pre-change (rest) distribution, should be sqrt(3)*2048
 #define SIG0      45000   // 2*variance of pre-change distribution
 #define MU1       3157    // Mean of post-change (free-fall) distribution
 #define SIG1      208     // 2*variance of post-change distribution
 #define LOG_S0_S1 5506    // 2048*ln(stdev0/stdev1)
 
-#define THRESHOLD 40000   // This should detect a change within 4 samples
+#define THRESHOLD 40000   // This should detect a change within about 4 samples
 
 /*
  * Global variables
@@ -73,8 +78,9 @@ PROCESS_THREAD(main_process, ev, data)
   char str[16];
   int len;
   
-  static int32_t Wn = 0;      // Significant statistic
+  static int32_t Wn = 0;      // Significant statistic, shifted left by PREC
   uint32_t mag;               // Magnitude of acceleration
+  uint32_t mag2;              // Squared magnitude of acceleration
   
   PROCESS_EXITHANDLER(broadcast_close(&broadcast);)
   PROCESS_BEGIN();
@@ -109,53 +115,13 @@ PROCESS_THREAD(main_process, ev, data)
   
   while(1)
   {
-    // Only sample data every 1/SAMPLE_FREQ seconds
+    ADC12CTL0 |= ADC12SC;                   // Sampling open
+    
+    // Only sample data at most every 1/SAMPLE_FREQ seconds
     if( pause )
     {
-      ADC12CTL0 |= ADC12SC;                   // Sampling open
       etimer_set(&et, CLOCK_SECOND / SAMPLE_FREQ );
       PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
-      
-      // Calculate the magnitude of the acceleration
-      // Use square root for now, but may not need later
-      mag = results[0]*results[0] + 
-            results[1]*results[1] + 
-            results[2]*results[2];
-      
-      // Take the square root of mag - which may be as high as 3*(2^24).
-      mag = isqrt( mag );
-            
-      
-      // Update significant statistic
-      Wn += LOG_S0_S1 + (((mag - MU0)*(mag - MU0)) << 11)/SIG0
-                      - (((mag - MU1)*(mag - MU1)) << 11)/SIG1;
-                      
-      if( Wn < 0 )
-      {
-        Wn = 0;
-      }
-      
-      if( Wn > THRESHOLD )
-      {
-        // Change detected, light up LED's
-        leds_on(LEDS_ALL);
-      }
-      else
-      {
-        // No change
-        leds_off(LEDS_ALL);
-      }
-      
-      // Copy significant statistic and acceleration magnitude to buffer
-      len = sprintf(str, "%ld,%ld\n", Wn, mag);
-      
-      // Copy to send buffer, will send when we get a chance.
-      strncat( result_str, str, RESULT_STR_LEN-result_len-1 );
-      
-      result_len += len;
-      
-      if( result_len >= RESULT_STR_LEN )
-        result_len = RESULT_STR_LEN - 1;
     }
     else
     {
@@ -168,8 +134,53 @@ PROCESS_THREAD(main_process, ev, data)
       broadcast_send(&broadcast);
       result_str[0] = 0;
       result_len = 0;
-      
     }
+    
+    
+    // Calculate the magnitude of the acceleration
+    // Use square root for now, but may not need later
+    mag2 = (uint32_t)results[0]*(uint32_t)results[0] + 
+           (uint32_t)results[1]*(uint32_t)results[1] + 
+           (uint32_t)results[2]*(uint32_t)results[2];
+    
+    // Take the square root of mag - which may be as high as 3*(2^24).
+    mag = isqrt( mag2 );
+    
+    // Update significant statistic
+    Wn += LOG_S0_S1 + (((mag - MU0)*(mag - MU0)) << 11)/SIG0
+    - (((mag - MU1)*(mag - MU1)) << 11)/SIG1;
+    
+    // Cap Wn at 2*THRESHOLD and keep positive               
+    if( Wn < 0 )
+    {
+      Wn = 0;
+    }
+    else if( Wn > THRESHOLD << 1 )
+    {
+      Wn = THRESHOLD << 1;
+    }
+    
+    if( Wn > THRESHOLD )
+    {
+      // Change detected, light up LED's
+      leds_on(LEDS_ALL);
+    }
+    else
+    {
+      // No change
+      leds_off(LEDS_ALL);
+    }
+    
+    // Copy significant statistic and acceleration magnitude to buffer
+    len = sprintf(str, "%ld,%ld\n", Wn, mag);
+    
+    // Copy to send buffer, will send when we get a chance.
+    strncat( result_str, str, RESULT_STR_LEN-result_len-1 );
+    
+    result_len += len;
+    
+    if( result_len >= RESULT_STR_LEN )
+      result_len = RESULT_STR_LEN - 1;
     
     pause = (pause+1)%SEND_FREQ;
   }
