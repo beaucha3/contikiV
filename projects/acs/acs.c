@@ -28,7 +28,7 @@
  * are sent at once.
  */
 #define SAMPLE_FREQ 16  // (Approximate) frequency of data sampling
-#define SEND_FREQ 4     // Number of samples to send at a time, larger = less frequent
+#define SEND_FREQ 10     // Number of samples to send at a time, larger = less frequent
 
 
 /*
