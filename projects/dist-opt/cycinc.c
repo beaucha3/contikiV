@@ -52,8 +52,8 @@ uint8_t abs_diff(uint8_t a, uint8_t b);
  */
 static int32_t grad_iterate(int32_t iterate)
 {
-  return iterate;
-// 	return ( iterate - STEP * ( (1 << (NODE_ID + 1))*x - (NODE_ID << (PREC_SHIFT + 1))));
+  //return iterate;
+  return ( iterate - STEP * ( (1 << (NODE_ID + 1))*iterate - (NODE_ID << (PREC_SHIFT + 1))));
 }
 
 /*
