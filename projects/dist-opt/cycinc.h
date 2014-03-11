@@ -4,6 +4,8 @@
 #include <stdint.h>
 
 #define MKEY 1156   // Chosen by fair die rolls, guaranteed to be random
+#define MAX_NODES 4     // Number of nodes in topology
+#define COMM_CHANNEL 100
 
 typedef struct opt_message_s
 {

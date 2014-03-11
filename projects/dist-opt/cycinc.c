@@ -21,11 +21,10 @@
  * integers
  */
 #define STEP 1
-#define START_VAL 0
+#define START_VAL STEP
+#define EPSILON 2       // Epsilon for stopping condition
 
-#define NODE_ID 2       // Zero based
-#define MAX_NODES 4     // Number of nodes in topology
-#define COMM_CHANNEL 100
+#define NODE_ID 1       // One based
 #define PREC_SHIFT 8
 
 #define NODE_ADDR_0 0
@@ -45,6 +44,7 @@
  */
 uint8_t is_from_neighbor( opt_message_t* m );
 uint8_t abs_diff(uint8_t a, uint8_t b);
+int32_t abs_diff32(uint32_t a, uint32_t b);
 
 /*
  * Sub-function
@@ -63,6 +63,7 @@ static struct broadcast_conn broadcast;
 
 static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)
 {
+  static uint8_t stop = 0;
   opt_message_t *msg = (opt_message_t*)packetbuf_dataptr();
   opt_message_t out;
   /*
@@ -72,6 +73,7 @@ static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)
    */
   
   if(   NULL != msg 
+     && !stop
      && msg->key == MKEY
      && is_from_neighbor(msg) )
   {
@@ -85,6 +87,18 @@ static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)
     
     packetbuf_copyfrom( &out,sizeof(out) );
     broadcast_send(&broadcast);
+    
+    /*
+     * Stopping condition
+     */
+    if( stop = ( abs_diff32(out.data, msg->data) < EPSILON ) )
+    {
+      leds_on(LEDS_ALL);
+    }
+    else
+    {
+      leds_off(LEDS_ALL);
+    }
   }
 }
 static const struct broadcast_callbacks broadcast_call = {broadcast_recv};
@@ -101,7 +115,7 @@ PROCESS_THREAD(main_process, ev, data)
   
   broadcast_open(&broadcast, COMM_CHANNEL, &broadcast_call);
   
-#if NODE_ID == 0
+#if NODE_ID == 1
   opt_message_t out;
   
   out.key = MKEY;
@@ -133,7 +147,7 @@ uint8_t is_from_neighbor( opt_message_t* m )
   // Account for previous node.
   // If we are the first node, MAX_NODES - 1 is our neighbor
   return (1 == (NODE_ADDR_0 - m->addr[0])) ||
-         (NODE_ADDR_0 == 0 && m->addr[0] == MAX_NODES - 1);
+         (NODE_ADDR_0 == 1 && m->addr[0] == MAX_NODES);
 }
 
 /*
@@ -143,6 +157,22 @@ uint8_t is_from_neighbor( opt_message_t* m )
 uint8_t abs_diff(uint8_t a, uint8_t b)
 {
   uint8_t ret;
+  
+  if( a > b )
+    ret = a - b;
+  else
+    ret = b - a;
+  
+  return ret;  
+}
+
+/*
+ * Returns the absolute difference of two uint32_t's, which will
+ * always be positive.
+ */
+int32_t abs_diff32(int32_t a, int32_t b)
+{
+  int32_t ret;
   
   if( a > b )
     ret = a - b;
