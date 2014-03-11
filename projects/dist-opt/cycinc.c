@@ -42,7 +42,7 @@
 /*
  * Local function declarations
  */
-uint8_t is_from_neighbor( opt_message_t* m );
+uint8_t is_from_upstream( opt_message_t* m );
 uint8_t abs_diff(uint8_t a, uint8_t b);
 int32_t abs_diff32(uint32_t a, uint32_t b);
 
@@ -75,7 +75,7 @@ static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)
   if(   NULL != msg 
      && !stop
      && msg->key == MKEY
-     && is_from_neighbor(msg) )
+     && is_from_upstream(msg) )
   {
     // We're good, valid packet received from neighbor
     out.key = MKEY;
@@ -142,7 +142,7 @@ PROCESS_THREAD(main_process, ev, data)
  * Returns non-zero value if m originated from a neighbor node
  * Message is from a neighbor if addr[0] is NODE_ADDR_0 - 1
  */	
-uint8_t is_from_neighbor( opt_message_t* m )
+uint8_t is_from_upstream( opt_message_t* m )
 {
   // Account for previous node.
   // If we are the first node, MAX_NODES - 1 is our neighbor
