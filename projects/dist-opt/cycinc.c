@@ -27,9 +27,9 @@
 #define NODE_ID 1       // One based
 #define PREC_SHIFT 8
 
-#define NODE_ADDR_0 0
+#define NODE_ADDR_0 NODE_ID
 #define NODE_ADDR_1 0
-#define NODE_ADDR_2 NODE_ID
+#define NODE_ADDR_2 0
 
 #include "contiki.h"
 #include <stdio.h>
@@ -44,7 +44,7 @@
  */
 uint8_t is_from_upstream( opt_message_t* m );
 uint8_t abs_diff(uint8_t a, uint8_t b);
-int32_t abs_diff32(uint32_t a, uint32_t b);
+int32_t abs_diff32(int32_t a, int32_t b);
 
 /*
  * Sub-function
@@ -64,7 +64,11 @@ static struct broadcast_conn broadcast;
 static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)
 {
   static uint8_t stop = 0;
-  opt_message_t *msg = (opt_message_t*)packetbuf_dataptr();
+  
+  static opt_message_t msg_recv;	
+  static opt_message_t* msg = &msg_recv;
+  packetbuf_copyto(msg);  
+  
   opt_message_t out;
   /*
    * packetbuf_dataptr() should return a pointer to an opt_message_t,
@@ -145,7 +149,7 @@ PROCESS_THREAD(main_process, ev, data)
 uint8_t is_from_upstream( opt_message_t* m )
 {
   // Account for previous node.
-  // If we are the first node, MAX_NODES - 1 is our neighbor
+  // If we are the first node, MAX_NODES - 1 is our upstream neighbor
   return (1 == (NODE_ADDR_0 - m->addr[0])) ||
          (NODE_ADDR_0 == 1 && m->addr[0] == MAX_NODES);
 }
@@ -167,7 +171,7 @@ uint8_t abs_diff(uint8_t a, uint8_t b)
 }
 
 /*
- * Returns the absolute difference of two uint32_t's, which will
+ * Returns the absolute difference of two int32_t's, which will
  * always be positive.
  */
 int32_t abs_diff32(int32_t a, int32_t b)
