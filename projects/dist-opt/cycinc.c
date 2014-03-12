@@ -53,7 +53,7 @@ int32_t abs_diff32(int32_t a, int32_t b);
 static int32_t grad_iterate(int32_t iterate)
 {
   //return iterate;
-  return ( iterate - STEP * ( (1 << (NODE_ID + 1))*iterate - (NODE_ID << (PREC_SHIFT + 1))));
+  return ( iterate - ((STEP * ( (1 << (NODE_ID + 1))*iterate - (NODE_ID << (PREC_SHIFT + 1)))) >> PREC_SHIFT) );
 }
 
 /*
@@ -95,7 +95,7 @@ static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)
     /*
      * Stopping condition
      */
-    if( stop = ( abs_diff32(out.data, msg->data) < EPSILON ) )
+    if( (stop = ( abs_diff32(out.data, msg->data) < EPSILON )) )
     {
       leds_on(LEDS_ALL);
     }
