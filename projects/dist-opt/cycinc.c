@@ -22,7 +22,7 @@
  */
 #define STEP 1
 #define START_VAL STEP
-#define EPSILON 2       // Epsilon for stopping condition
+#define EPSILON -1       // Epsilon for stopping condition
 
 #define NODE_ID 4       // One based
 #define PREC_SHIFT 8
