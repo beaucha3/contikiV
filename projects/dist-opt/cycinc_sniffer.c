@@ -22,7 +22,8 @@ broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)
 
 	packetbuf_copyto(msg);
 	
-	printf("Received Packet: Key: %"PRIu16"\tNode: %"PRIu8"\tIter: %"PRIu8"\tData: %"PRIi32"\n", msg->key, msg->addr[0], msg->iter, msg->data);
+	//if(msg->key == (MKEY + 1))	
+		printf("Received Packet,Key: %"PRIu16",Node: %"PRIu8",Iter: %"PRIu8",Data: %"PRIi32"\n", msg->key, msg->addr[0], msg->iter, msg->data);
 	
 	//printf("Recv handler got something\n");
 	

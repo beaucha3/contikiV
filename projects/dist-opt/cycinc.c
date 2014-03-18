@@ -20,12 +20,12 @@
  * Actual step size is STEP/256, this is to keep all computations as 
  * integers
  */
-#define STEP 1
+#define STEP 2
 #define START_VAL STEP
-#define EPSILON -1       // Epsilon for stopping condition
+#define EPSILON 1       // Epsilon for stopping condition
 
 #define NODE_ID 4       // One based
-#define PREC_SHIFT 8
+#define PREC_SHIFT 9
 
 #define NODE_ADDR_0 NODE_ID
 #define NODE_ADDR_1 0
@@ -38,6 +38,16 @@
 #include "dev/leds.h"
 
 #include "cycinc.h"
+
+/*
+ * Global Variables
+ */ 
+
+//Variable storing previous cycle's local estimate for stop condition
+static int32_t cur_data = 0;
+static int16_t cur_cycle = 0;
+
+
 
 /*
  * Local function declarations
@@ -78,11 +88,25 @@ static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)
   
   if(   NULL != msg 
      && !stop
-     && msg->key == MKEY
      && is_from_upstream(msg) )
   {
-    // We're good, valid packet received from neighbor
-    out.key = MKEY;
+    /*
+     * Stopping condition
+     */
+    stop = ( ( abs_diff32(cur_data, msg->data) <= EPSILON ) && (cur_cycle > 1) );
+ 
+    if(stop || msg->key == (MKEY + 1))
+    {
+      leds_on(LEDS_ALL);
+  	  out.key = MKEY + 1;
+      stop = 1;
+    }
+    else if(msg->key == MKEY)
+    {
+      leds_off(LEDS_ALL);
+	  out.key = MKEY;
+	}
+      
     out.addr[0] = NODE_ADDR_0;
     out.addr[1] = NODE_ADDR_1;
     out.addr[2] = NODE_ADDR_2;
@@ -92,17 +116,8 @@ static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)
     packetbuf_copyfrom( &out,sizeof(out) );
     broadcast_send(&broadcast);
     
-    /*
-     * Stopping condition
-     */
-    if( (stop = ( abs_diff32(out.data, msg->data) < EPSILON )) )
-    {
-      leds_on(LEDS_ALL);
-    }
-    else
-    {
-      leds_off(LEDS_ALL);
-    }
+    cur_data = msg->data;
+	cur_cycle++;    
   }
 }
 static const struct broadcast_callbacks broadcast_call = {broadcast_recv};
@@ -149,7 +164,7 @@ PROCESS_THREAD(main_process, ev, data)
 uint8_t is_from_upstream( opt_message_t* m )
 {
   // Account for previous node.
-  // If we are the first node, MAX_NODES - 1 is our upstream neighbor
+  // If we are the first node, MAX_NODES is our upstream neighbor
   return (1 == (NODE_ADDR_0 - m->addr[0])) ||
          (NODE_ADDR_0 == 1 && m->addr[0] == MAX_NODES);
 }
