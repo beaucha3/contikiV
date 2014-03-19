@@ -1,7 +1,7 @@
 /*
- * cycinc.c
+ * markovinc.c
  * 
- * Cyclic Incremental Algorithm Implementation 
+ * (Neeraj, please update this)
  * 
  * The intermediate motes, and they will wait for a message 
  * from the upstream node, compute the local gradient and send it 
@@ -37,7 +37,7 @@
 #include "net/rime.h"
 #include "dev/leds.h"
 
-#include "cycinc.h"
+#include "markovinc.h"
 
 /*
  * Global Variables
