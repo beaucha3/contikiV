@@ -29,10 +29,12 @@
 #define NUM_NBRS 5      // Number of neighbors, including self
 #define START_ID 10     // ID of top left node in grid
 
+#define NODE_ID (rimeaddr_node_addr.u8[0] - START_ID + 1)
+
 #define START_NODE_0 10  // Address of node to start optimization algorithm
 #define START_NODE_1 0
 
-#define PREC_SHIFT 9
+#define PREC_SHIFT 13
 
 #define MAX_RETRANSMISSIONS 4
 #define NUM_HISTORY_ENTRIES 4
@@ -52,8 +54,8 @@
  * Global Variables
  */ 
 
-//Variable storing previous cycle's local estimate for stop condition
-static int32_t cur_data = 0;
+// Variable storing previous cycle's local estimate for stop condition
+static int32_t cur_data[DATA_LEN] = {0};
 static int16_t cur_cycle = 0;
 
 // List of neighbors
@@ -74,15 +76,22 @@ void gen_neighbor_list();
 
 uint8_t abs_diff(uint8_t a, uint8_t b);
 int32_t abs_diff32(int32_t a, int32_t b);
+int32_t norm2(int32_t* a, int32_t* b, int len);
 
 /*
  * Sub-function
  * Computes the next iteration of the algorithm
  */
-static int32_t grad_iterate(int32_t iterate)
+static int32_t grad_iterate1(int32_t iterate)
 {
-  return iterate;
-//   return ( iterate - ((STEP * ( (1 << (NODE_ID + 1))*iterate - (NODE_ID << (PREC_SHIFT + 1)))) >> PREC_SHIFT) );
+//  return iterate;
+  return ( iterate - ((STEP * ( (1 << (NODE_ID + 1))*iterate - (NODE_ID << (PREC_SHIFT + 1)))) >> PREC_SHIFT) );
+}
+
+static int32_t grad_iterate2(int32_t iterate)
+{
+  //  return iterate;
+  return ( iterate - ((STEP * ( (1 << ((NODE_ID) + 1))*iterate - (NODE_ID << (PREC_SHIFT + 1)))) >> PREC_SHIFT) );
 }
 
 /*
@@ -216,7 +225,11 @@ PROCESS_THREAD(main_process, ev, data)
     
     out.key = MKEY;
     out.iter = 0;
-    out.data  = START_VAL;
+    
+    for( i=0; i<DATA_LEN; i++ )
+    {
+      out.data[i]  = START_VAL;
+    }
     
     packetbuf_copyfrom( &out,sizeof(out) );
     runicast_send(&runicast, to, MAX_RETRANSMISSIONS);
@@ -254,10 +267,10 @@ static void message_recv(const rimeaddr_t *from)
       /*
        * Stopping condition
        */
-      stop = ( ( abs_diff32(cur_data, msg.data) <= EPSILON ) 
+      stop = ( ( norm2(cur_data, msg.data, DATA_LEN) <= (EPSILON*EPSILON) ) 
              && (cur_cycle > 1) );
       
-      cur_data = msg.data;
+      memcpy( cur_data, msg.data, DATA_LEN*sizeof(int32_t) );
       cur_cycle++;
       
       if(stop || msg.key == (MKEY + 1))
@@ -270,7 +283,10 @@ static void message_recv(const rimeaddr_t *from)
       {
         leds_off(LEDS_ALL);
         msg.key = MKEY;
-        msg.data  = grad_iterate( msg.data );
+        
+        // This is really inelegant, but it should work
+        msg.data[0]  = grad_iterate1( msg.data[0] );
+        msg.data[1]  = grad_iterate2( msg.data[1] );
       }
       
       msg.iter = msg.iter + 1;
@@ -453,3 +469,23 @@ int32_t abs_diff32(int32_t a, int32_t b)
   return ret;  
 }
 
+/*
+ * Returns the squared norm of the vectors in a and b.  a and b
+ * are assumed to be "shifted" by PREC_SHIFT.
+ * Does no bounds checking.
+ */
+int32_t norm2(int32_t* a, int32_t* b, int len)
+{
+  int i;
+  int32_t retval = 0;
+  
+  if( a && b )
+  {
+    for( i=0; i<len; i++ )
+    {
+      retval += ((a[i] - b[i])*(a[i] - b[i]) >> PREC_SHIFT);
+    }
+  }
+  
+  return retval;
+}

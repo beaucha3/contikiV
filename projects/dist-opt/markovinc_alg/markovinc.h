@@ -4,14 +4,16 @@
 #include <stdint.h>
 
 #define MKEY 1156   // Chosen by fair die rolls, guaranteed to be random
-#define MAX_NODES 4     // Number of nodes in topology
+//#define MAX_NODES 4     // Number of nodes in topology
 #define COMM_CHANNEL 100
+
+#define DATA_LEN 2
 
 typedef struct opt_message_s
 {
-  uint16_t key;         // Unique header
-  uint16_t iter;         // Number of nodes the iterate has passed through
-  int32_t data;         // Current data step of optimization algorithm
+  uint16_t key;           // Unique header
+  uint16_t iter;          // Number of nodes the iterate has passed through
+  int32_t data[DATA_LEN]; // Current data step of optimization algorithm
 }
 opt_message_t;
 
