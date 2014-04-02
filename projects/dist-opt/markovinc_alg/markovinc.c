@@ -247,6 +247,7 @@ PROCESS_THREAD(main_process, ev, data)
 
 static void message_recv(const rimeaddr_t *from)
 {
+  int i;
   static uint8_t stop = 0;
   
   static opt_message_t msg;
@@ -288,6 +289,14 @@ static void message_recv(const rimeaddr_t *from)
         msg.data[0]  = grad_iterate1( msg.data[0] );
         msg.data[1]  = grad_iterate2( msg.data[1] );
       }
+      
+      // Print some data
+      printf("%u, %u", msg.key, msg.iter);
+      for( i=0; i<DATA_LEN; i++ )
+      {
+        printf(", %lu", msg.data[i]);
+      }
+      printf("\n");
       
       msg.iter = msg.iter + 1;
       packetbuf_copyfrom( &msg,sizeof(msg) );
