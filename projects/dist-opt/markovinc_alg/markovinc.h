@@ -1,5 +1,5 @@
-#ifndef _CYCINC_H_
-#define _CYCINC_H_
+#ifndef _MARKOVINC_H_
+#define _MARKOVINC_H_
 
 #include <stdint.h>
 
@@ -10,9 +10,7 @@
 typedef struct opt_message_s
 {
   uint16_t key;         // Unique header
-  uint8_t addr[3];      // Allow 3-dimensional addresses, 
-                        // for simplicity of expansion to 3-D arrays
-  uint8_t iter;         // Number of nodes the iterate has passed through
+  uint16_t iter;         // Number of nodes the iterate has passed through
   int32_t data;         // Current data step of optimization algorithm
 }
 opt_message_t;
@@ -27,4 +25,4 @@ opt_message_t;
 	//return ( ((x & 0xFF00FF00) >> 8) | ((x & 0x00FF00FF) << 8) );
 //}
 
-#endif /* _CYCINC_H_ */
+#endif /* _MARKOVINC_H_ */

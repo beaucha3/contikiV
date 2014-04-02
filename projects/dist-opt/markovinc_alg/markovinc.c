@@ -24,18 +24,27 @@
 #define START_VAL STEP
 #define EPSILON 1       // Epsilon for stopping condition
 
-#define NODE_ID 4       // One based
+#define MAX_ROWS 3      // Number of rows in sensor grid
+#define MAX_COLS 3      // Number of columns in sensor grid
+#define NUM_NBRS 5      // Number of neighbors, including self
+#define START_ID 10     // ID of top left node in grid
+
+#define START_NODE_0 10  // Address of node to start optimization algorithm
+#define START_NODE_1 0
+
 #define PREC_SHIFT 9
 
-#define NODE_ADDR_0 NODE_ID
-#define NODE_ADDR_1 0
-#define NODE_ADDR_2 0
+#define MAX_RETRANSMISSIONS 4
+#define NUM_HISTORY_ENTRIES 4
 
 #include "contiki.h"
 #include <stdio.h>
 #include <string.h>
 #include "net/rime.h"
 #include "dev/leds.h"
+#include "lib/list.h"
+#include "lib/memb.h"
+#include "random.h"
 
 #include "markovinc.h"
 
@@ -47,12 +56,22 @@
 static int32_t cur_data = 0;
 static int16_t cur_cycle = 0;
 
+// List of neighbors
+static rimeaddr_t neighbors[NUM_NBRS];
 
 
 /*
  * Local function declarations
  */
-uint8_t is_from_upstream( opt_message_t* m );
+void rimeaddr2rc( rimeaddr_t a, unsigned int *row, unsigned int *col );
+void rc2rimeaddr( rimeaddr_t* a , unsigned int row, unsigned int col );
+
+static void message_recv(const rimeaddr_t *from);
+
+uint8_t send_to_neighbor();
+uint8_t is_neighbor( const rimeaddr_t* a );
+void gen_neighbor_list();
+
 uint8_t abs_diff(uint8_t a, uint8_t b);
 int32_t abs_diff32(int32_t a, int32_t b);
 
@@ -62,67 +81,98 @@ int32_t abs_diff32(int32_t a, int32_t b);
  */
 static int32_t grad_iterate(int32_t iterate)
 {
-  //return iterate;
-  return ( iterate - ((STEP * ( (1 << (NODE_ID + 1))*iterate - (NODE_ID << (PREC_SHIFT + 1)))) >> PREC_SHIFT) );
+  return iterate;
+//   return ( iterate - ((STEP * ( (1 << (NODE_ID + 1))*iterate - (NODE_ID << (PREC_SHIFT + 1)))) >> PREC_SHIFT) );
 }
 
 /*
  * Communications handlers
  */
-static struct broadcast_conn broadcast;
 
-static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)
+/* OPTIONAL: Sender history.
+ * Detects duplicate callbacks at receiving nodes.
+ * Duplicates appear when ack messages are lost. */
+struct history_entry
 {
-  static uint8_t stop = 0;
+  struct history_entry *next;
+  rimeaddr_t addr;
+  uint8_t seq;
+};
+LIST(history_table);
+MEMB(history_mem, struct history_entry, NUM_HISTORY_ENTRIES);
+/*---------------------------------------------------------------------------*/
+static void
+recv_runicast(struct runicast_conn *c, const rimeaddr_t *from, uint8_t seqno)
+{
+  /* Sender history */
+  struct history_entry *e = NULL;
   
-  static opt_message_t msg_recv;	
-  static opt_message_t* msg = &msg_recv;
-  packetbuf_copyto(msg);  
-  
-  opt_message_t out;
-  /*
-   * packetbuf_dataptr() should return a pointer to an opt_message_t,
-   * but double-check to be sure.  Valid packets should start with
-   * MKEY, and we're only interested in packets from our neighbors.
-   */
-  
-  if(   NULL != msg 
-     && !stop
-     && is_from_upstream(msg) )
+  for(e = list_head(history_table); e != NULL; e = e->next) 
   {
-    /*
-     * Stopping condition
-     */
-    stop = ( ( abs_diff32(cur_data, msg->data) <= EPSILON ) && (cur_cycle > 1) );
- 
-    if(stop || msg->key == (MKEY + 1))
+    if(rimeaddr_cmp(&e->addr, from)) 
     {
-      leds_on(LEDS_ALL);
-  	  out.key = MKEY + 1;
-  	  
-      stop = 1;
+      break;
     }
-    else if(msg->key == MKEY)
-    {
-      leds_off(LEDS_ALL);
-	  out.key = MKEY;
-	  out.data  = grad_iterate( msg->data );
-	}
-      
-    out.addr[0] = NODE_ADDR_0;
-    out.addr[1] = NODE_ADDR_1;
-    out.addr[2] = NODE_ADDR_2;
-    out.iter = msg->iter + 1;
-    
-    packetbuf_copyfrom( &out,sizeof(out) );
-    broadcast_send(&broadcast);
-    
-    cur_data = msg->data;
-	cur_cycle++;    
   }
+  
+  if(e == NULL) 
+  {
+    /* Create new history entry */
+    e = memb_alloc(&history_mem);
+    
+    if(e == NULL)
+    {
+      e = list_chop(history_table); /* Remove oldest at full history */
+    }
+    
+    rimeaddr_copy(&e->addr, from);
+    e->seq = seqno;
+    list_push(history_table, e);
+  } 
+  else 
+  {
+    /* Detect duplicate callback */
+    if(e->seq == seqno) 
+    {
+//       printf("runicast message received from %d.%d, seqno %d (DUPLICATE)\n",
+//              from->u8[0], from->u8[1], seqno);
+      return;
+    }
+    /* Update existing history entry */
+    e->seq = seqno;
+  }
+  
+  /*
+   * Call function to do something with packet 
+   */
+  message_recv( from );
+  
+//   printf("runicast message received from %d.%d, seqno %d\n",
+//          from->u8[0], from->u8[1], seqno);
 }
-static const struct broadcast_callbacks broadcast_call = {broadcast_recv};
-	
+
+static void sent_runicast(struct runicast_conn *c, const rimeaddr_t *to, uint8_t retransmissions)
+{
+//   printf("runicast message sent to %d.%d, retransmissions %d\n",
+//          to->u8[0], to->u8[1], retransmissions);
+}
+
+static void timedout_runicast(struct runicast_conn *c, const rimeaddr_t *to, uint8_t retransmissions)
+{
+  printf("runicast message timed out when sending to %d.%d, retransmissions %d\n",
+         to->u8[0], to->u8[1], retransmissions);
+}
+
+static const struct runicast_callbacks runicast_callbacks = 
+{ 
+  recv_runicast,
+  sent_runicast,
+  timedout_runicast
+};
+
+static struct runicast_conn runicast;
+/*-----------------------------------------------------------------------*/
+
 PROCESS(main_process, "main");
 AUTOSTART_PROCESSES(&main_process);
 /*-------------------------------------------------------------------*/
@@ -130,24 +180,47 @@ PROCESS_THREAD(main_process, ev, data)
 {
   static struct etimer et;
   
-  PROCESS_EXITHANDLER(broadcast_close(&broadcast);)
+  PROCESS_EXITHANDLER(runicast_close(&runicast);)
+  
   PROCESS_BEGIN();
   
-  broadcast_open(&broadcast, COMM_CHANNEL, &broadcast_call);
+  runicast_open(&runicast, 144, &runicast_callbacks);
   
-#if NODE_ID == 1
-  opt_message_t out;
+  /* Sender history */
+  list_init(history_table);
+  memb_init(&history_mem);
   
-  out.key = MKEY;
-  out.addr[0] = NODE_ADDR_0;
-  out.addr[1] = NODE_ADDR_1;
-  out.addr[2] = NODE_ADDR_2;
-  out.iter = 0;
-  out.data  = START_VAL;
+  gen_neighbor_list();
   
-  packetbuf_copyfrom( &out,sizeof(out) );
-  broadcast_send(&broadcast);
-#endif
+  // Seed random number generator with node's address
+  random_init(rimeaddr_node_addr.u8[0] + rimeaddr_node_addr.u8[1]);
+  
+  if(rimeaddr_node_addr.u8[0] == START_NODE_0 &&
+    rimeaddr_node_addr.u8[1] == START_NODE_1) 
+  {
+    int i;
+    opt_message_t out;
+    rimeaddr_t* to = &(neighbors[NUM_NBRS]);
+    
+    for( i=1; i<NUM_NBRS; i++ )
+    {
+      /*
+       * If addresses are different, send there
+       */
+      if( !(rimeaddr_cmp(&(neighbors[i]), &rimeaddr_node_addr)) )
+      {
+        to = &(neighbors[i]);
+        break;
+      }
+    }
+    
+    out.key = MKEY;
+    out.iter = 0;
+    out.data  = START_VAL;
+    
+    packetbuf_copyfrom( &out,sizeof(out) );
+    runicast_send(&runicast, to, MAX_RETRANSMISSIONS);
+  }
   
   while(1)
   {
@@ -157,17 +230,195 @@ PROCESS_THREAD(main_process, ev, data)
   
   PROCESS_END();
 }
-	
-/*
- * Returns non-zero value if m originated from a neighbor node
- * Message is from a neighbor if addr[0] is NODE_ADDR_0 - 1
- */	
-uint8_t is_from_upstream( opt_message_t* m )
+
+
+static void message_recv(const rimeaddr_t *from)
 {
-  // Account for previous node.
-  // If we are the first node, MAX_NODES is our upstream neighbor
-  return (1 == (NODE_ADDR_0 - m->addr[0])) ||
-         (NODE_ADDR_0 == 1 && m->addr[0] == MAX_NODES);
+  static uint8_t stop = 0;
+  
+  static opt_message_t msg;
+  packetbuf_copyto(&msg);  
+  
+  /*
+   * We're only interested in packets from our neighbors.
+   */
+  if( is_neighbor( from ) )
+  {
+    /*
+     * Send the data to one of our neighbors
+     * send_to_neighbor() returns non-zero if we sent to ourselves
+     * If we sent to ourselves, try again.
+     */
+    do
+    {
+      /*
+       * Stopping condition
+       */
+      stop = ( ( abs_diff32(cur_data, msg.data) <= EPSILON ) 
+             && (cur_cycle > 1) );
+      
+      cur_data = msg.data;
+      cur_cycle++;
+      
+      if(stop || msg.key == (MKEY + 1))
+      {
+        leds_on(LEDS_ALL);
+        msg.key = MKEY + 1;
+        stop = 1;
+      }
+      else if(msg.key == MKEY)
+      {
+        leds_off(LEDS_ALL);
+        msg.key = MKEY;
+        msg.data  = grad_iterate( msg.data );
+      }
+      
+      msg.iter = msg.iter + 1;
+      packetbuf_copyfrom( &msg,sizeof(msg) );
+    }
+    while( send_to_neighbor() );
+  }
+}
+
+/*
+ * Generate a random number from 0 through 4 and send
+ * the packet buffer to that node
+ * 
+ * Returns non-zero if sent to self, 0 if sent to external node
+ */
+uint8_t send_to_neighbor()
+{
+  uint8_t r, retval;
+  
+  r = random_rand() % NUM_NBRS;
+  
+  // Don't send to self
+  if( !( retval = rimeaddr_cmp(&(neighbors[r]), &rimeaddr_node_addr)) )
+  {
+    runicast_send(&runicast, &(neighbors[r]), MAX_RETRANSMISSIONS);
+  }
+  
+  return retval;
+}
+
+/*
+ * Returns non-zero if a is in the neighbor list
+ */
+uint8_t is_neighbor( const rimeaddr_t* a )
+{
+  uint8_t i, retval = 0;
+  
+  if( a )
+  {
+    for( i=0; i<NUM_NBRS; i++ )
+    {
+      retval = retval || rimeaddr_cmp(&(neighbors[i]), a);
+    }
+  }
+  
+  return retval;
+}
+
+/*
+ * Creates list of neighbors, storing it in a global variable
+ * static rimeaddr_t neighbors[NUM_NBRS];
+ * 
+ * If neighbor in any direction does not exist, then its address
+ * is given by this node's address.
+ */
+void gen_neighbor_list()
+{
+  rimeaddr_t a;
+  unsigned int row, col;
+  
+  // Get our row and column
+  rimeaddr2rc( rimeaddr_node_addr, &row, &col );
+  
+  // Define first "neighbor" to be this node
+  rimeaddr_copy( &(neighbors[0]), &rimeaddr_node_addr );
+  
+  // Get rime addresses of neighbor nodes
+  
+  // North neighbor, ensure row != 1
+  if( row == 1 )
+  {
+    // Can't go North, use our address
+    rimeaddr_copy( &(neighbors[1]), &rimeaddr_node_addr );
+  }
+  else
+  {
+    // Get address of node to North, copy to neighbors list
+    rc2rimeaddr( &a, row-1, col );
+    rimeaddr_copy( &(neighbors[1]), &a );
+  }
+    
+  // East neighbor, ensure col != MAX_COLS
+  if( col == MAX_COLS )
+  {
+    // Can't go East, use our address
+    rimeaddr_copy( &(neighbors[2]), &rimeaddr_node_addr );
+  }
+  else
+  {
+    // Get address of node to East, copy to neighbors list
+    rc2rimeaddr( &a, row, col+1 );
+    rimeaddr_copy( &(neighbors[2]), &a );
+  }
+  
+  // South neighbor, ensure row != MAX_ROWS
+  if( row ==  MAX_ROWS )
+  {
+    // Can't go South, use our address
+    rimeaddr_copy( &(neighbors[3]), &rimeaddr_node_addr );
+  }
+  else
+  {
+    // Get address of node to South, copy to neighbors list
+    rc2rimeaddr( &a, row+1, col );
+    rimeaddr_copy( &(neighbors[3]), &a );
+  }
+    
+  // West neighbor, ensure col != 1
+  if( col == 1 )
+  {
+    // Can't go West, use our address
+    rimeaddr_copy( &(neighbors[4]), &rimeaddr_node_addr );
+  }
+  else
+  {
+    // Get address of node to West, copy to neighbors list
+    rc2rimeaddr( &a, row, col-1 );
+    rimeaddr_copy( &(neighbors[4]), &a );
+  }
+}
+
+/*
+ * Calculates the rime address of the node at (row, col) and writes it
+ * in a.  row and col are one-based (there is no row 0 or col 0).
+ * 
+ * Assumes nodes are in row major order (e.g., row 1 contains 
+ * nodes 1,2,3,...
+ */
+void rc2rimeaddr( rimeaddr_t* a , unsigned int row, unsigned int col )
+{
+  if( a )
+  {
+    a->u8[0] = (START_ID - 1) + (row-1)*MAX_COLS + col;
+    a->u8[1] = 0;
+  }
+}
+
+/*
+ * Calculates the row and column of the node with the rime address a
+ * and writes it into row and col.
+ */
+void rimeaddr2rc( rimeaddr_t a, unsigned int *row, unsigned int *col )
+{
+  if( row && col )
+  {
+    *row = ((a.u8[0] - START_ID ) / MAX_COLS) + 1;
+    *col = ((a.u8[0] - START_ID ) % MAX_COLS) + 1;
+  }
 }
 
 /*
