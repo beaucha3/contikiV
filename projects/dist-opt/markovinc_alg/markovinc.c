@@ -15,6 +15,8 @@
  * 
  */
 
+#define DEBUG 3
+
 /* 
  * Using fixed step size for now.
  * Actual step size is STEP/256, this is to keep all computations as 
@@ -271,11 +273,25 @@ static void message_recv(const rimeaddr_t *from)
       stop = ( ( norm2(cur_data, msg.data, DATA_LEN) <= (EPSILON*EPSILON) ) 
              && (cur_cycle > 1) );
       
+#if DEBUG > 0
+      // Print message we just received
+      printf("Received from %d.%d:\n",(from->u8)[0],(from->u8)[1] );
+      printf("%u, %u", msg.key, msg.iter);
+      for( i=0; i<DATA_LEN; i++ )
+      {
+        printf(", %ld", msg.data[i]);
+      }
+      printf("\n");
+#endif
+      
       memcpy( cur_data, msg.data, DATA_LEN*sizeof(int32_t) );
       cur_cycle++;
       
       if(stop || msg.key == (MKEY + 1))
       {
+#if DEBUG > 0
+        printf("Stop condition met.\n");
+#endif
         leds_on(LEDS_ALL);
         msg.key = MKEY + 1;
         stop = 1;
@@ -290,19 +306,26 @@ static void message_recv(const rimeaddr_t *from)
         msg.data[1]  = grad_iterate2( msg.data[1] );
       }
       
-      // Print some data
+      msg.iter = msg.iter + 1;
+      
+      // Print message we are about to send
       printf("%u, %u", msg.key, msg.iter);
       for( i=0; i<DATA_LEN; i++ )
       {
-        printf(", %lu", msg.data[i]);
+        printf(", %ld", msg.data[i]);
       }
       printf("\n");
       
-      msg.iter = msg.iter + 1;
       packetbuf_copyfrom( &msg,sizeof(msg) );
     }
     while( send_to_neighbor() );
   }
+#if DEBUG > 0
+  else
+  {
+    printf("Message received from %d.%d - not neighbor\n",(from->u8)[0],(from->u8)[1] );
+  }
+#endif
 }
 
 /*
@@ -316,6 +339,10 @@ uint8_t send_to_neighbor()
   uint8_t r, retval;
   
   r = random_rand() % NUM_NBRS;
+  
+#if DEBUG > 0
+  printf("Sending to neighbor at %d.%d\n", (neighbors[r]).u8[0], (neighbors[r]).u8[0] );
+#endif
   
   // Don't send to self
   if( !( retval = rimeaddr_cmp(&(neighbors[r]), &rimeaddr_node_addr)) )
@@ -415,6 +442,15 @@ void gen_neighbor_list()
     rc2rimeaddr( &a, row, col-1 );
     rimeaddr_copy( &(neighbors[4]), &a );
   }
+  
+#if DEBUG > 1
+  int i;
+  
+  for( i=0; i<5; i++ )
+  {
+    printf("Neighbor %d at %d.%d\n", i, (neighbors[i]).u8[0], (neighbors[i]).u8[1]);
+  }
+#endif
 }
 
 /*
@@ -495,6 +531,10 @@ int32_t norm2(int32_t* a, int32_t* b, int len)
       retval += ((a[i] - b[i])*(a[i] - b[i]) >> PREC_SHIFT);
     }
   }
+  
+#if DEBUG > 2
+  printf("Norm2 returning %ld\n", retval);
+#endif
   
   return retval;
 }
