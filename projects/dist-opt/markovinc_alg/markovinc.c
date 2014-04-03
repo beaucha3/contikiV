@@ -36,7 +36,7 @@
 #define START_NODE_0 10  // Address of node to start optimization algorithm
 #define START_NODE_1 0
 
-#define PREC_SHIFT 13
+#define PREC_SHIFT 9
 
 #define MAX_RETRANSMISSIONS 4
 #define NUM_HISTORY_ENTRIES 4
@@ -73,6 +73,7 @@ void rc2rimeaddr( rimeaddr_t* a , unsigned int row, unsigned int col );
 static void message_recv(const rimeaddr_t *from);
 
 uint8_t send_to_neighbor();
+void flood_network( const rimeaddr_t *from, opt_message_t *msg );
 uint8_t is_neighbor( const rimeaddr_t* a );
 void gen_neighbor_list();
 
@@ -256,9 +257,10 @@ static void message_recv(const rimeaddr_t *from)
   packetbuf_copyto(&msg);  
   
   /*
-   * We're only interested in packets from our neighbors.
+   * We're only interested in packets from our neighbors, and only 
+   * if we haven't stopped.
    */
-  if( is_neighbor( from ) )
+  if( is_neighbor( from ) && !stop )
   {
     /*
      * Send the data to one of our neighbors
@@ -270,7 +272,23 @@ static void message_recv(const rimeaddr_t *from)
       /*
        * Stopping condition
        */
-      stop = ( ( norm2(cur_data, msg.data, DATA_LEN) <= (EPSILON*EPSILON) ) 
+      
+#if DEBUG > 2
+      for( i=0; i<DATA_LEN; i++ )
+      {
+        printf("%ld ", cur_data[i]);
+      }
+      printf("\n");
+      
+      for( i=0; i<DATA_LEN; i++ )
+      {
+        printf("%ld ", (msg.data)[i]);
+      }
+      printf("\n");
+#endif
+      // norm2 returns norm shifted left by PREC_SHIFT
+      stop = ( ( norm2(cur_data, msg.data, DATA_LEN) <= 
+                 (EPSILON*EPSILON) << PREC_SHIFT ) 
              && (cur_cycle > 1) );
       
 #if DEBUG > 0
@@ -295,6 +313,11 @@ static void message_recv(const rimeaddr_t *from)
         leds_on(LEDS_ALL);
         msg.key = MKEY + 1;
         stop = 1;
+        
+        // We have converged!  Flood network with the good news!
+        flood_network( from, &msg );
+        
+        break;
       }
       else if(msg.key == MKEY)
       {
@@ -304,24 +327,29 @@ static void message_recv(const rimeaddr_t *from)
         // This is really inelegant, but it should work
         msg.data[0]  = grad_iterate1( msg.data[0] );
         msg.data[1]  = grad_iterate2( msg.data[1] );
+      
+      
+        msg.iter = msg.iter + 1;
+        
+        // Print message we are about to send
+        printf("%u, %u", msg.key, msg.iter);
+        for( i=0; i<DATA_LEN; i++ )
+        {
+          printf(", %ld", msg.data[i]);
+        }
+        printf("\n");
+        
+        packetbuf_copyfrom( &msg,sizeof(msg) );
       }
-      
-      msg.iter = msg.iter + 1;
-      
-      // Print message we are about to send
-      printf("%u, %u", msg.key, msg.iter);
-      for( i=0; i<DATA_LEN; i++ )
+      else
       {
-        printf(", %ld", msg.data[i]);
+        break;
       }
-      printf("\n");
-      
-      packetbuf_copyfrom( &msg,sizeof(msg) );
     }
     while( send_to_neighbor() );
   }
 #if DEBUG > 0
-  else
+  else if( !stop )
   {
     printf("Message received from %d.%d - not neighbor\n",(from->u8)[0],(from->u8)[1] );
   }
@@ -341,7 +369,7 @@ uint8_t send_to_neighbor()
   r = random_rand() % NUM_NBRS;
   
 #if DEBUG > 0
-  printf("Sending to neighbor at %d.%d\n", (neighbors[r]).u8[0], (neighbors[r]).u8[0] );
+  printf("Sending to neighbor at %d.%d\n", (neighbors[r]).u8[0], (neighbors[r]).u8[1] );
 #endif
   
   // Don't send to self
@@ -351,6 +379,30 @@ uint8_t send_to_neighbor()
   }
   
   return retval;
+}
+
+/*
+ * Loops through all neighbors, sending a packet to all except 
+ * this node and 'from'.
+ */
+void flood_network( const rimeaddr_t *from, opt_message_t *msg )
+{
+  int r;
+  
+  if( from && msg )
+  {
+    // neighbors[0] is this node, can skip
+    for( r=1; r<NUM_NBRS; r++ )
+    {
+      // Send only if not this node and is not node we just received from
+      if( (!rimeaddr_cmp(&(neighbors[r]), &rimeaddr_node_addr))
+        &&(!rimeaddr_cmp(&(neighbors[r]), from)) )
+      {
+        packetbuf_copyfrom( msg, sizeof(opt_message_t) );
+        runicast_send(&runicast, &(neighbors[r]), MAX_RETRANSMISSIONS);
+      }
+    }
+  }
 }
 
 /*
@@ -523,12 +575,25 @@ int32_t norm2(int32_t* a, int32_t* b, int len)
 {
   int i;
   int32_t retval = 0;
+
+#if DEBUG > 1
+  for( i=0; i<len; i++ )
+  {
+    printf("%ld ", a[i]);
+  }
+  printf("\n");
+  for( i=0; i<len; i++ )
+  {
+    printf("%ld ", b[i]);
+  }
+  printf("\n");
+#endif
   
-  if( a && b )
+  if( a != NULL && b != NULL )
   {
     for( i=0; i<len; i++ )
     {
-      retval += ((a[i] - b[i])*(a[i] - b[i]) >> PREC_SHIFT);
+      retval += (a[i] - b[i])*(a[i] - b[i]);
     }
   }
   
