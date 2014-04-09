@@ -260,75 +260,105 @@ static void message_recv(const rimeaddr_t *from)
    * We're only interested in packets from our neighbors, and only 
    * if we haven't stopped.
    */
-  if( is_neighbor( from ) && !stop )
+  if( is_neighbor( from ) )
   {
     /*
-     * Send the data to one of our neighbors
-     * send_to_neighbor() returns non-zero if we sent to ourselves
-     * If we sent to ourselves, try again.
+     * Update stop condition - we need to find that the iterate we
+     * just received is within EPSILON of our current iterate at this
+     * node STOP_THRES times
+     * 
+     * Otherwise, reset the stop count
      */
-    do
+    
+    // Check if someone else has converged
+    if( msg.key == (MKEY + 1) )
     {
+      stop = STOP_THRES;
+    }
+    
+    
+    // norm2 returns norm shifted left by PREC_SHIFT
+    if ( ( norm2(cur_data, msg.data, DATA_LEN) <= 
+         (EPSILON*EPSILON) << PREC_SHIFT ) 
+       &&(cur_cycle > 1)
+       &&(stop < STOP_THRES) )
+    {
+      // We are within EPSILON, but no one else is, increment stop counter
+      stop++;
+    }
+    else if( stop >= STOP_THRES )
+    {
+      // Someone has converged, set stop counter
+      stop = STOP_THRES;
+    }
+    else
+    {
+      // No one has converged yet.
+      stop = 0;
+    }
+    
+    // stop = STOP_THRES if msg.key == MKEY+1
+    if( stop >= STOP_THRES )
+    {
+      #if DEBUG > 0
+      printf("Stop condition met.\n");
+      #endif
+      leds_on(LEDS_ALL);
+      msg.key = MKEY + 1;
+      // stop is set before loop
+      //stop = 1;
+      
+      // We have converged!  Flood network with the good news!
+      flood_network( from, &msg );
+    }
+    else if( msg.key == MKEY )
+    {
+      
       /*
-       * Stopping condition
+       * Send the data to one of our neighbors
+       * send_to_neighbor() returns non-zero if we sent to ourselves
+       * If we sent to ourselves, try again.
        */
-      
+      do
+      {
+        
 #if DEBUG > 2
-      for( i=0; i<DATA_LEN; i++ )
-      {
-        printf("%ld ", cur_data[i]);
-      }
-      printf("\n");
-      
-      for( i=0; i<DATA_LEN; i++ )
-      {
-        printf("%ld ", (msg.data)[i]);
-      }
-      printf("\n");
-#endif
-      // norm2 returns norm shifted left by PREC_SHIFT
-      stop = ( ( norm2(cur_data, msg.data, DATA_LEN) <= 
-                 (EPSILON*EPSILON) << PREC_SHIFT ) 
-             && (cur_cycle > 1) );
-      
-#if DEBUG > 0
-      // Print message we just received
-      printf("Received from %d.%d:\n",(from->u8)[0],(from->u8)[1] );
-      printf("%u, %u", msg.key, msg.iter);
-      for( i=0; i<DATA_LEN; i++ )
-      {
-        printf(", %ld", msg.data[i]);
-      }
-      printf("\n");
-#endif
-      
-      memcpy( cur_data, msg.data, DATA_LEN*sizeof(int32_t) );
-      cur_cycle++;
-      
-      if(stop || msg.key == (MKEY + 1))
-      {
-#if DEBUG > 0
-        printf("Stop condition met.\n");
-#endif
-        leds_on(LEDS_ALL);
-        msg.key = MKEY + 1;
-        stop = 1;
+        for( i=0; i<DATA_LEN; i++ )
+        {
+          printf("%ld ", cur_data[i]);
+        }
+        printf("\n");
         
-        // We have converged!  Flood network with the good news!
-        flood_network( from, &msg );
+        for( i=0; i<DATA_LEN; i++ )
+        {
+          printf("%ld ", (msg.data)[i]);
+        }
+        printf("\n");
+#endif
+
+
+#if DEBUG > 0
+        // Print message we just received
+        printf("Received from %d.%d:\n",(from->u8)[0],(from->u8)[1] );
+        printf("%u, %u", msg.key, msg.iter);
+        for( i=0; i<DATA_LEN; i++ )
+        {
+          printf(", %ld", msg.data[i]);
+        }
+        printf("\n");
+#endif
         
-        break;
-      }
-      else if(msg.key == MKEY)
-      {
+        memcpy( cur_data, msg.data, DATA_LEN*sizeof(int32_t) );
+        cur_cycle++;
+        
         leds_off(LEDS_ALL);
         msg.key = MKEY;
         
         // This is really inelegant, but it should work
         msg.data[0]  = grad_iterate1( msg.data[0] );
         msg.data[1]  = grad_iterate2( msg.data[1] );
-      
-      
+        
+        
         msg.iter = msg.iter + 1;
         
         // Print message we are about to send
@@ -341,15 +371,11 @@ static void message_recv(const rimeaddr_t *from)
         
         packetbuf_copyfrom( &msg,sizeof(msg) );
       }
-      else
-      {
-        break;
-      }
+      while( send_to_neighbor() );
     }
-    while( send_to_neighbor() );
   }
 #if DEBUG > 0
-  else if( !stop )
+  else( !stop )
   {
     printf("Message received from %d.%d - not neighbor\n",(from->u8)[0],(from->u8)[1] );
   }
