@@ -3,12 +3,12 @@
  * 
  * Cyclic Incremental Algorithm Implementation 
  * 
- * The intermediate motes, and they will wait for a message 
+ * The motes will wait for a message 
  * from the upstream node, compute the local gradient and send it 
  * downstream.
  * 
- * The originator node, node 1, will compute the first gradient and wait
- * for the "go" signal from the master node, node 0.
+ * The originator node, node 1, will compute the first gradient
+ * on startup and pass it along the chain.
  * 
  * Subfunctions are hard-coded. Function to optimize is global sum of
  * all subfunctions.
