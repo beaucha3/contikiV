@@ -15,7 +15,7 @@
  * 
  */
 
-#define DEBUG 3
+#define DEBUG 0
 
 /* 
  * Using fixed step size for now.
@@ -25,6 +25,7 @@
 #define STEP 2
 #define START_VAL STEP
 #define EPSILON 1       // Epsilon for stopping condition
+#define STOP_THRES 5
 
 #define MAX_ROWS 3      // Number of rows in sensor grid
 #define MAX_COLS 3      // Number of columns in sensor grid
@@ -337,7 +338,7 @@ static void message_recv(const rimeaddr_t *from)
 #endif
 
 
-#if DEBUG > 0
+#if DEBUG > 1
         // Print message we just received
         printf("Received from %d.%d:\n",(from->u8)[0],(from->u8)[1] );
         printf("%u, %u", msg.key, msg.iter);
@@ -348,7 +349,6 @@ static void message_recv(const rimeaddr_t *from)
         printf("\n");
 #endif
         
-        memcpy( cur_data, msg.data, DATA_LEN*sizeof(int32_t) );
         cur_cycle++;
         
         leds_off(LEDS_ALL);
@@ -358,7 +358,7 @@ static void message_recv(const rimeaddr_t *from)
         msg.data[0]  = grad_iterate1( msg.data[0] );
         msg.data[1]  = grad_iterate2( msg.data[1] );
         
-        
+        // Increment the iteration
         msg.iter = msg.iter + 1;
         
         // Print message we are about to send
@@ -372,10 +372,13 @@ static void message_recv(const rimeaddr_t *from)
         packetbuf_copyfrom( &msg,sizeof(msg) );
       }
       while( send_to_neighbor() );
+      
+      // Copy the data we just sent into cur_data
+      memcpy( cur_data, msg.data, DATA_LEN*sizeof(int32_t) );
     }
   }
 #if DEBUG > 0
-  else( !stop )
+  else
   {
     printf("Message received from %d.%d - not neighbor\n",(from->u8)[0],(from->u8)[1] );
   }
@@ -424,6 +427,9 @@ void flood_network( const rimeaddr_t *from, opt_message_t *msg )
       if( (!rimeaddr_cmp(&(neighbors[r]), &rimeaddr_node_addr))
         &&(!rimeaddr_cmp(&(neighbors[r]), from)) )
       {
+#if DEBUG > 0
+        printf("Flooding to neighbor at %d.%d\n", (neighbors[r]).u8[0], (neighbors[r]).u8[1] );
+#endif
         packetbuf_copyfrom( msg, sizeof(opt_message_t) );
         runicast_send(&runicast, &(neighbors[r]), MAX_RETRANSMISSIONS);
       }
