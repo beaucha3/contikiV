@@ -16,7 +16,7 @@
 #include "dev/button-sensor.h"
 #include "obs_model.h"
 
-#define NUM_DATA 50
+#define FREQ 64
 
 static struct broadcast_conn broadcast;
 	
@@ -32,7 +32,8 @@ PROCESS_THREAD(main_process, ev, data)
 {
   static struct etimer et;
   int16_t out; 
-  int i;
+  int i, s;
+  char str[5];
   
 	PROCESS_EXITHANDLER(broadcast_close(&broadcast));
 	PROCESS_BEGIN();
@@ -50,16 +51,27 @@ PROCESS_THREAD(main_process, ev, data)
 	etimer_set(&et, CLOCK_SECOND*2);
 	PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
-	// Broadcast NUM_DATA light measurements and stop
-	for( i=0; i < NUM_DATA; i++)
+	
+	while( 1 )
 	{
-		etimer_set(&et, CLOCK_SECOND/NUM_DATA);
+		etimer_set(&et, CLOCK_SECOND/FREQ);
 		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 		
 		out = light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC);
+    
+    s = snprintf( str, 5, "%i", out ) + 1;
 		
-		packetbuf_copyfrom( &out,sizeof(out) );
-		broadcast_send(&broadcast);
+		//packetbuf_copyfrom( &out,sizeof(out) );
+    if( s )
+    {
+      packetbuf_copyfrom( str, s );
+    }
+    else
+    {
+      packetbuf_copyfrom( "I am alive.", 12 );
+    }
+    
+    broadcast_send(&broadcast);
 	}
 
 	PROCESS_END();
