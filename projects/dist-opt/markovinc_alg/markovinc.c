@@ -15,7 +15,15 @@
  * 
  */
 
-#define DEBUG 0
+#define DEBUG 2
+#define FLOOD 0   // Set to 0 to disable network flood at end
+                  // in favor of sending data to monitor node
+                  // Currently, network flooding isn't quite working.
+                  
+#if FLOOD==0
+#define MON_NODE_0 25  // Monitor node address
+#define MON_NODE_1 0
+#endif
 
 /* 
  * Using fixed step size for now.
@@ -24,8 +32,8 @@
  */
 #define STEP 2
 #define START_VAL STEP
-#define EPSILON 1       // Epsilon for stopping condition
-#define STOP_THRES 5
+#define EPSILON 5       // Epsilon for stopping condition
+#define STOP_THRES 2
 
 #define MAX_ROWS 3      // Number of rows in sensor grid
 #define MAX_COLS 3      // Number of columns in sensor grid
@@ -74,9 +82,14 @@ void rc2rimeaddr( rimeaddr_t* a , unsigned int row, unsigned int col );
 static void message_recv(const rimeaddr_t *from);
 
 uint8_t send_to_neighbor();
-void flood_network( const rimeaddr_t *from, opt_message_t *msg );
 uint8_t is_neighbor( const rimeaddr_t* a );
 void gen_neighbor_list();
+
+#if FLOOD==0
+void send_to_mon( char* msg, int len );
+#else
+void flood_network( const rimeaddr_t *from, opt_message_t *msg );
+#endif
 
 uint8_t abs_diff(uint8_t a, uint8_t b);
 int32_t abs_diff32(int32_t a, int32_t b);
@@ -255,13 +268,15 @@ static void message_recv(const rimeaddr_t *from)
   static uint8_t stop = 0;
   
   static opt_message_t msg;
+  
+  
   packetbuf_copyto(&msg);  
   
   /*
    * We're only interested in packets from our neighbors, and only 
    * if we haven't stopped.
    */
-  if( is_neighbor( from ) )
+  if( is_neighbor( from ) && (stop < STOP_THRES) )
   {
     /*
      * Update stop condition - we need to find that the iterate we
@@ -280,11 +295,11 @@ static void message_recv(const rimeaddr_t *from)
     
     // norm2 returns norm shifted left by PREC_SHIFT
     if ( ( norm2(cur_data, msg.data, DATA_LEN) <= 
-         (EPSILON*EPSILON) << PREC_SHIFT ) 
+         ((EPSILON*EPSILON) << PREC_SHIFT )) 
        &&(cur_cycle > 1)
        &&(stop < STOP_THRES) )
     {
-      // We are within EPSILON, but no one else is, increment stop counter
+      // We are within EPSILON, but no one else has converged, increment stop counter
       stop++;
     }
     else if( stop >= STOP_THRES )
@@ -301,16 +316,47 @@ static void message_recv(const rimeaddr_t *from)
     // stop = STOP_THRES if msg.key == MKEY+1
     if( stop >= STOP_THRES )
     {
-      #if DEBUG > 0
+#if DEBUG > 0
       printf("Stop condition met.\n");
-      #endif
-      leds_on(LEDS_ALL);
-      msg.key = MKEY + 1;
+#endif
+      
+      if( msg.key == MKEY + 1 )
+      {
+        // Someone else converged, pass on the message to everyone
+        // except the node we received it from
+#if FLOOD != 0
+        flood_network( from, &msg );
+#endif
+        leds_on(LEDS_GREEN);
+      }
+      else
+      {
+        /* We are first to converge.  Send to all neighbors and don't
+         * forget to increment MKEY.
+         * We don't need to perform another iteration, since it 
+         * shouldn't really get us much.
+         */
+#if FLOOD == 0
+        int i, l = 0;
+        char str[64] = {0};
+        l += snprintf(str, 32, "Converged %u:", msg.iter);
+        for( i=0; i<DATA_LEN && l<32; i++ )
+        {
+          l += snprintf(str+l, 32-l, "%li ", msg.data[i]);
+        }
+        send_to_mon( str, l+1 );
+        
+#else
+        msg.key = MKEY + 1;
+        flood_network( &(neighbors[0]), &msg );
+#endif
+        leds_on(LEDS_RED);
+      }
       // stop is set before loop
       //stop = 1;
       
       // We have converged!  Flood network with the good news!
-      flood_network( from, &msg );
+      
     }
     else if( msg.key == MKEY )
     {
@@ -377,12 +423,6 @@ static void message_recv(const rimeaddr_t *from)
       memcpy( cur_data, msg.data, DATA_LEN*sizeof(int32_t) );
     }
   }
-#if DEBUG > 0
-  else
-  {
-    printf("Message received from %d.%d - not neighbor\n",(from->u8)[0],(from->u8)[1] );
-  }
-#endif
 }
 
 /*
@@ -410,6 +450,8 @@ uint8_t send_to_neighbor()
   return retval;
 }
 
+
+#if FLOOD != 0
 /*
  * Loops through all neighbors, sending a packet to all except 
  * this node and 'from'.
@@ -436,6 +478,21 @@ void flood_network( const rimeaddr_t *from, opt_message_t *msg )
     }
   }
 }
+#else /* FLOOD==0 */
+/*
+ * Send a packet to the monitoring node
+ */
+void send_to_mon( char* msg, int len )
+{
+  rimeaddr_t a;
+  
+  a.u8[0] = MON_NODE_0;
+  a.u8[1] = MON_NODE_1;
+  
+  packetbuf_copyfrom( msg, len );
+  runicast_send(&runicast, &a, MAX_RETRANSMISSIONS);
+}
+#endif /* FLOOD==0 */
 
 /*
  * Returns non-zero if a is in the neighbor list
