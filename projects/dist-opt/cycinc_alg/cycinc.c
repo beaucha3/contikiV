@@ -27,6 +27,8 @@
 #define MODEL_A 56000
 #define MODEL_B 3
 #define MODEL_C 72
+#define SPACING 30      // Centimeters of spacing
+
 
 #define START_ID  10    // ID of first node in chain
 #define START_NODE_0 10  // Address of node to start optimization algorithm
@@ -34,6 +36,14 @@
 #define NODE_ID (rimeaddr_node_addr.u8[0] - START_ID + 1)
 #define PREC_SHIFT 9
 #define MAX_ITER 500
+
+/*
+ * Arrays to convert Node ID to row/column
+ * Lower left node is at (0,0), and arrays are indexed 
+ * with NODE_ID
+ */
+#define ID2ROW { 0, 0, 0, 1, 2, 2, 2, 1, 1 }
+#define ID2COL { 0, 1, 2, 2, 2, 1, 0, 0, 1 }
 
 #include "contiki.h"
 #include <stdio.h>
@@ -56,6 +66,9 @@ static int16_t cur_cycle = 0;
 /*
  * Local function declarations
  */
+int get_row();
+int get_col();
+
 uint8_t is_from_upstream( opt_message_t* m );
 uint8_t abs_diff(uint8_t a, uint8_t b);
 int32_t abs_diff32(int32_t a, int32_t b);
@@ -190,15 +203,22 @@ uint8_t is_from_upstream( opt_message_t* m )
          (NODE_ADDR_0 == 1 && m->addr[0] == MAX_NODES);
 }
 
+/*
+ * Returns row of node * spacing in cm
+ */
 int get_row()
 {
-  
+  int r = ID2ROW;
+  return (r[ NODE_ID - START_ID ]) * SPACING;
 }
 
+/*
+ * Returns column of node * spacing in cm
+ */
 int get_col()
 {
-  
-  
+  int c = ID2COL;
+  return (c[ NODE_ID - START_ID ]) * SPACING;
 }
 
 /*
