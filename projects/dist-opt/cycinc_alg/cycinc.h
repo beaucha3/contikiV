@@ -7,13 +7,13 @@
 #define MAX_NODES 4     // Number of nodes in topology
 #define COMM_CHANNEL 100
 
+#define DATA_LEN 3
+
 typedef struct opt_message_s
 {
   uint16_t key;         // Unique header
-  uint8_t addr[3];      // Allow 3-dimensional addresses, 
-                        // for simplicity of expansion to 3-D arrays
   uint8_t iter;         // Number of nodes the iterate has passed through
-  int32_t data;         // Current data step of optimization algorithm
+  int32_t data[DATA_LEN];         // Current data step of optimization algorithm
 }
 opt_message_t;
 
