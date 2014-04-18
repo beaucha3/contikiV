@@ -33,6 +33,7 @@
 #define START_NODE_1 0
 #define NODE_ID (rimeaddr_node_addr.u8[0] - START_ID + 1)
 #define PREC_SHIFT 9
+#define MAX_ITER 500
 
 #include "contiki.h"
 #include <stdio.h>
@@ -58,6 +59,8 @@ static int16_t cur_cycle = 0;
 uint8_t is_from_upstream( opt_message_t* m );
 uint8_t abs_diff(uint8_t a, uint8_t b);
 int32_t abs_diff32(int32_t a, int32_t b);
+int32_t g_model(int32_t* iterate);
+int32_t f_model(int32_t* iterate);
 
 /*
  * Sub-function
@@ -68,6 +71,14 @@ static void grad_iterate(int32_t* iterate, int32_t* result, int len)
   //return iterate;
   //return ( iterate - ((STEP * ( (1 << (NODE_ID + 1))*iterate - (NODE_ID << (PREC_SHIFT + 1)))) >> PREC_SHIFT) );
   
+  int32_t node_loc[3] = {get_col(), get_row(), 0};
+  int32_t reading = light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC);
+  
+  for(i = 0; i < len; i++)
+  {
+	  *(result + i) = *(iterate + i) - STEP * 4 * MODEL_A * (reading - f_model(iterate)) / (g_model(iterate) * g_model(iterate)) * (*(iterate + i) - node_loc[i]);
+  }
+     
 }
 
 /*
@@ -78,7 +89,7 @@ static struct broadcast_conn broadcast;
 static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)
 {
   static uint8_t stop = 0;
-  
+
   static opt_message_t msg_recv;	
   static opt_message_t* msg = &msg_recv;
   packetbuf_copyto(msg);  
@@ -97,14 +108,17 @@ static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)
     /*
      * Stopping condition
      */
-    stop = ( ( abs_diff32(cur_data, msg->data) <= EPSILON ) && (cur_cycle > 1) );
- 
-    if(stop || msg->key == (MKEY + 1))
+    if ( ( abs_diff32(cur_data, msg->data) <= EPSILON ) && (cur_cycle > 1) )
+		stop++;
+	else
+		stop = 0;
+    
+    if(stop == 10 || msg->key == (MKEY + 1) || out.iter >= MAX_ITER)
     {
       leds_on(LEDS_ALL);
   	  out.key = MKEY + 1;
   	  
-      stop = 1;
+      stop = 10;
     }
     else if(msg->key == MKEY)
     {
@@ -217,5 +231,21 @@ int32_t abs_diff32(int32_t a, int32_t b)
     ret = b - a;
   
   return ret;  
+}
+
+/*
+ * Computes the denominator of model
+ */
+int32_t g_model(int32_t* iterate)
+{
+	return (get_col() - *(iterate))*(get_col() - *(iterate)) + (get_row() - *(iterate + 1))*(get_row() - *(iterate + 1)) + (*(iterate + 2))*(*(iterate + 2)) + MODEL_B;
+}
+
+/*
+ * Computes the observation model function
+ */
+int32_t f_model(int32_t* iterate)
+{
+	return MODEL_A/g_model(iterate) + MODEL_C;
 }
 
