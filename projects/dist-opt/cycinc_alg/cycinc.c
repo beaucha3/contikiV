@@ -169,6 +169,8 @@ PROCESS_THREAD(main_process, ev, data)
   PROCESS_EXITHANDLER(broadcast_close(&broadcast);)
   PROCESS_BEGIN();
   
+  SENSORS_ACTIVATE(light_sensor);
+  
   broadcast_open(&broadcast, COMM_CHANNEL, &broadcast_call);
   
   if(rimeaddr_node_addr.u8[0] == START_NODE_0 &&
