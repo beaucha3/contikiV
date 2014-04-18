@@ -50,7 +50,7 @@
 #include <string.h>
 #include "net/rime.h"
 #include "dev/leds.h"
-
+#include "dev/light-sensor.h"
 #include "cycinc.h"
 
 /*
