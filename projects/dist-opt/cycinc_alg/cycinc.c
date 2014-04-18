@@ -171,11 +171,17 @@ PROCESS_THREAD(main_process, ev, data)
   
   SENSORS_ACTIVATE(light_sensor);
   
+  etimer_set(&et, CLOCK_SECOND*2);
+  PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+  
   broadcast_open(&broadcast, COMM_CHANNEL, &broadcast_call);
   
   if(rimeaddr_node_addr.u8[0] == START_NODE_0 &&
     rimeaddr_node_addr.u8[1] == START_NODE_1) 
   {
+	etimer_set(&et, CLOCK_SECOND*2);
+    PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));  
+    
     int32_t s[3] = START_VAL;
     opt_message_t out;
     
