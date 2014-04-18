@@ -24,12 +24,15 @@
 #define START_VAL STEP
 #define EPSILON 1       // Epsilon for stopping condition
 
-#define NODE_ID 4       // One based
-#define PREC_SHIFT 9
+#define MODEL_A 56000
+#define MODEL_B 3
+#define MODEL_C 72
 
-#define NODE_ADDR_0 NODE_ID
-#define NODE_ADDR_1 0
-#define NODE_ADDR_2 0
+#define START_ID  10    // ID of first node in chain
+#define START_NODE_0 10  // Address of node to start optimization algorithm
+#define START_NODE_1 0
+#define NODE_ID (rimeaddr_node_addr.u8[0] - START_ID + 1)
+#define PREC_SHIFT 9
 
 #include "contiki.h"
 #include <stdio.h>
@@ -60,10 +63,11 @@ int32_t abs_diff32(int32_t a, int32_t b);
  * Sub-function
  * Computes the next iteration of the algorithm
  */
-static int32_t grad_iterate(int32_t iterate)
+static void grad_iterate(int32_t* iterate, int32_t* result, int len)
 {
   //return iterate;
-  return ( iterate - ((STEP * ( (1 << (NODE_ID + 1))*iterate - (NODE_ID << (PREC_SHIFT + 1)))) >> PREC_SHIFT) );
+  //return ( iterate - ((STEP * ( (1 << (NODE_ID + 1))*iterate - (NODE_ID << (PREC_SHIFT + 1)))) >> PREC_SHIFT) );
+  
 }
 
 /*
@@ -135,19 +139,21 @@ PROCESS_THREAD(main_process, ev, data)
   
   broadcast_open(&broadcast, COMM_CHANNEL, &broadcast_call);
   
-#if NODE_ID == 1
-  opt_message_t out;
-  
-  out.key = MKEY;
-  out.addr[0] = NODE_ADDR_0;
-  out.addr[1] = NODE_ADDR_1;
-  out.addr[2] = NODE_ADDR_2;
-  out.iter = 0;
-  out.data  = START_VAL;
-  
-  packetbuf_copyfrom( &out,sizeof(out) );
-  broadcast_send(&broadcast);
-#endif
+  if(rimeaddr_node_addr.u8[0] == START_NODE_0 &&
+     rimeaddr_node_addr.u8[1] == START_NODE_1) 
+  {
+    opt_message_t out;
+    
+    out.key = MKEY;
+    out.addr[0] = NODE_ADDR_0;
+    out.addr[1] = NODE_ADDR_1;
+    out.addr[2] = NODE_ADDR_2;
+    out.iter = 0;
+    out.data  = START_VAL;
+    
+    packetbuf_copyfrom( &out,sizeof(out) );
+    broadcast_send(&broadcast);
+  }
   
   while(1)
   {
@@ -168,6 +174,17 @@ uint8_t is_from_upstream( opt_message_t* m )
   // If we are the first node, MAX_NODES is our upstream neighbor
   return (1 == (NODE_ADDR_0 - m->addr[0])) ||
          (NODE_ADDR_0 == 1 && m->addr[0] == MAX_NODES);
+}
+
+int get_row()
+{
+  
+}
+
+int get_col()
+{
+  
+  
 }
 
 /*
