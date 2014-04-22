@@ -25,9 +25,10 @@
 #define START_VAL {30 << PREC_SHIFT, 30 << PREC_SHIFT, 5 << PREC_SHIFT}
 #define EPSILON 1       // Epsilon for stopping condition
 
+#define CALIB_C 0       // Set to non-zero to calibrate on reset
 #define MODEL_A (56000 << PREC_SHIFT)
 #define MODEL_B (3 << PREC_SHIFT)
-#define MODEL_C (72 << PREC_SHIFT)
+#define MODEL_C model_c
 #define SPACING 30      // Centimeters of spacing
 
 #define NUM_NODES 9
@@ -64,6 +65,7 @@
 //Variable storing previous cycle's local estimate for stop condition
 static int64_t cur_data[DATA_LEN] = {0};
 static int16_t cur_cycle = 0;
+static int64_t model_c = 88 << PREC_SHIFT;
 
 
 
@@ -212,6 +214,25 @@ PROCESS_THREAD(main_process, ev, data)
   PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
   
   broadcast_open(&broadcast, COMM_CHANNEL, &broadcast_call);
+  
+#if CALIB_C > 0
+  /*
+   * Code to calibrate light sensor at reset
+   * Takes 50 readings and averages them, storing the value
+   * in a global variable, model_c
+   */
+  int i;
+  model_c = 0;
+  
+  for( i=0; i<50; i++ )
+  {
+    etimer_set(&etimer, CLOCK_SECOND/50);
+    PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&etimer));
+    model_c += light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC);
+  }
+  
+  model_c = (model_c / 50) << PREC_SHIFT;
+#endif
   
   if(rimeaddr_node_addr.u8[0] == START_NODE_0 &&
     rimeaddr_node_addr.u8[1] == START_NODE_1) 
