@@ -16,7 +16,7 @@
 #include <ctype.h>
 
 
-//#define SENSOR_CHANNEL 133 - now included in dan_protocol.h
+#define SENSOR_CHANNEL 133 //- now included in dan_protocol.h
 #define SENSOR_INIT_DIV 10
 
 #define DEBUG

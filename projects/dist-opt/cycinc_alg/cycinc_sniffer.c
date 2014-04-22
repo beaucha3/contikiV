@@ -17,22 +17,19 @@ broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)
    //printf("broadcast message received from %d.%d: '%s'\n",
           //from->u8[0], from->u8[1], (char *)packetbuf_dataptr());
 
-	static opt_message_t msg_recv;
-	static opt_message_t* msg = &msg_recv;	
+	static opt_message_t msg;
+  int i;
 
-	packetbuf_copyto(msg);
-	
-	//if(msg->key == (MKEY + 1))	
-		printf("Received Packet,Key: %"PRIu16",Node: %"PRIu8",Iter: %"PRIu8",Data: %"PRIi32"\n", msg->key, msg->addr[0], msg->iter, msg->data);
-	
-	//printf("Recv handler got something\n");
-	
-	//int i = 0;
-	//for(i ; i < packetbuf_datalen(); i++)
-	//{
-		//printf("%0.2X ", *((opt_message_t*)packetbuf_dataptr() + i));
-	//}
-	//printf("\n");	
+	packetbuf_copyto(&msg);
+  
+  printf("%u %u", msg.iter, msg.key);
+  
+  for( i=0; i<DATA_LEN; i++ )
+  {
+    printf(" %li", msg.data[i]);
+  }
+  
+  printf("\n");
 }
 static const struct broadcast_callbacks broadcast_call = {broadcast_recv};
 static struct broadcast_conn broadcast;

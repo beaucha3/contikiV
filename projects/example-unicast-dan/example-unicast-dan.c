@@ -12,7 +12,7 @@
  * For this example, program the receiver to have node address 1.0 and
  * the transmitter to have address 1.1
  */
-//#define TX
+#define TX
 
 #define RX_ADDR_0 1
 #define RX_ADDR_1 0
@@ -53,7 +53,7 @@ PROCESS_THREAD(example_unicast_process, ev, data)
   
   PROCESS_BEGIN();
   
-  unicast_open(&uc, 146, &unicast_callbacks);
+  unicast_open(&uc, 130, &unicast_callbacks);
   
   /* Set node address */
   rimeaddr_t my_addr;
@@ -98,7 +98,7 @@ PROCESS_THREAD(example_unicast_process, ev, data)
         addr.u8[0] = RX_ADDR_0;
         addr.u8[1] = RX_ADDR_1;
         
-        packetbuf_copyfrom("Hello", 6);
+        packetbuf_copyfrom("Hello, this is a test message", 30);
         if(!rimeaddr_cmp(&addr, &rimeaddr_node_addr))
         {
           printf("Sending message to %d.%d. Returned: %d\n", RX_ADDR_0, RX_ADDR_1,
