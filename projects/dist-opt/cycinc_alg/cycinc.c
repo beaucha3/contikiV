@@ -35,7 +35,7 @@
 #define START_ID  10    // ID of first node in chain
 #define START_NODE_0 10  // Address of node to start optimization algorithm
 #define START_NODE_1 0
-#define NODE_ID (rimeaddr_node_addr.u8[0] - START_ID + 1)
+#define NODE_ID (rimeaddr_node_addr.u8[0])
 #define MAX_ITER 500
 
 /*
@@ -149,27 +149,35 @@ static struct broadcast_conn broadcast;
 
 static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)
 {
+  int i;
   static uint8_t stop = 0;
   
-  static opt_message_t msg_recv;	
-  static opt_message_t* msg = &msg_recv;
-  packetbuf_copyto(msg);  
+  static opt_message_t msg;
+  packetbuf_copyto(&msg);  
   
   opt_message_t out;
+  
+  
+//   printf("%u: %u %u",from->u8[0], msg.iter, msg.key);
+//   
+//   for( i=0; i<DATA_LEN; i++ )
+//   {
+//     printf(" %"PRIi64, msg.data[i]);
+//   }
+//   
+//   printf("\n");
+  
   /*
    * packetbuf_dataptr() should return a pointer to an opt_message_t,
    * but double-check to be sure.  Valid packets should start with
    * MKEY, and we're only interested in packets from our neighbors.
    */
-  
-  if(   NULL != msg 
-    && !stop
-    && is_from_upstream(from) )
+  if( !stop && is_from_upstream(from) )
   {
     /*
      * Stopping condition
      */
-    if (( norm2(cur_data, msg->data, DATA_LEN) <= EPSILON*EPSILON ) &&
+    if (( norm2(cur_data, msg.data, DATA_LEN) <= EPSILON*EPSILON ) &&
         (cur_cycle > 1) )
     {
       stop++;
@@ -179,28 +187,32 @@ static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)
       stop = 0;
     }
     
-    if(stop == 10 || msg->key == (MKEY + 1) || out.iter >= MAX_ITER)
+    if(stop == 10 || msg.key == (MKEY + 1) || out.iter >= MAX_ITER)
     {
       leds_on(LEDS_ALL);
       out.key = MKEY + 1;
       
       stop = 10;
     }
-    else if(msg->key == MKEY)
+    else if(msg.key == MKEY)
     {
       leds_off(LEDS_ALL);
       out.key = MKEY;
-      grad_iterate( msg->data, out.data, DATA_LEN );
+      grad_iterate( msg.data, out.data, DATA_LEN );
     }
     
-    out.iter = msg->iter + 1;
+    out.iter = msg.iter + 1;
     
     packetbuf_copyfrom( &out,sizeof(out) );
     broadcast_send(&broadcast);
     
-    memcpy( cur_data, msg->data, DATA_LEN*sizeof(*cur_data) );
+    memcpy( cur_data, msg.data, DATA_LEN*sizeof(*cur_data) );
     cur_cycle++;    
   }
+//   else
+//   {
+//     printf("Not from neighbor or stopping\n");
+//   }
 }
 static const struct broadcast_callbacks broadcast_call = {broadcast_recv};
 
@@ -257,7 +269,7 @@ PROCESS_THREAD(main_process, ev, data)
     
     out.key = MKEY;
     out.iter = 0;
-    memcpy( out.data, s, DATA_LEN );
+    memcpy( out.data, s, DATA_LEN*sizeof(s[0]) );
     
     packetbuf_copyfrom( &out,sizeof(out) );
     broadcast_send(&broadcast);
