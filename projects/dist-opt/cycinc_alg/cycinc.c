@@ -44,6 +44,10 @@
  */
 #define ID2ROW { 0, 0, 0, 1, 2, 2, 2, 1, 1 }
 #define ID2COL { 0, 1, 2, 2, 2, 1, 0, 0, 1 }
+#define MAX_COL 2
+#define MAX_ROW 2
+#define MIN_COL 0
+#define MIN_ROW 0
 
 #include "contiki.h"
 #include <stdio.h>
@@ -94,6 +98,39 @@ static void grad_iterate(int64_t* iterate, int64_t* result, int len)
   {
     result[i] = iterate[i] - ((((STEP * 4 * (MODEL_A * (reading - f_model(iterate)) / ((g_model(iterate) * g_model(iterate)) >> PREC_SHIFT))) >> PREC_SHIFT) * (iterate[i] - node_loc[i])) >> PREC_SHIFT);
   }
+  
+  /*
+   * Bounding Box conditions to bring the iterate back if it strays too far 
+   */
+   if(result[1] > (((MAX_COL + 1) * SPACING) << PREC_SHIFT))
+   {
+	   result[1] = (((MAX_COL + 1) * SPACING) << PREC_SHIFT);
+   }
+   
+   if(result[1] < (((MIN_COL - 1) * SPACING) << PREC_SHIFT))
+   {
+	   result[1] = (((MIN_COL - 1) * SPACING) << PREC_SHIFT);
+   }
+
+   if(result[2] > (((MAX_ROW + 1) * SPACING) << PREC_SHIFT))
+   {
+	   result[2] = (((MAX_ROW + 1) * SPACING) << PREC_SHIFT);
+   }
+   
+   if(result[2] < (((ROW_COL - 1) * SPACING) << PREC_SHIFT))
+   {
+	   result[2] = (((ROW_COL - 1) * SPACING) << PREC_SHIFT);
+   }
+   
+   if(result[3] > ((30 * SPACING) << PREC_SHIFT))
+   {
+	   result[3] = ((30 * SPACING) << PREC_SHIFT);
+   }
+	  
+   if(result[3] < ((3 * SPACING) << PREC_SHIFT))
+   {
+	   result[3] = ((3 * SPACING) << PREC_SHIFT);
+   } 
   
 }
 
