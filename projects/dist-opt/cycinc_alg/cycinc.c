@@ -21,7 +21,8 @@
  * integers
  */
 #define STEP 2
-#define START_VAL {30, 30, 5}
+#define PREC_SHIFT 9
+#define START_VAL {30 << PREC_SHIFT, 30 << PREC_SHIFT, 5 << PREC_SHIFT}
 #define EPSILON 1       // Epsilon for stopping condition
 
 #define MODEL_A 56000
@@ -34,7 +35,6 @@
 #define START_NODE_0 10  // Address of node to start optimization algorithm
 #define START_NODE_1 0
 #define NODE_ID (rimeaddr_node_addr.u8[0] - START_ID + 1)
-#define PREC_SHIFT 9
 #define MAX_ITER 500
 
 /*
@@ -50,7 +50,7 @@
 #include <string.h>
 #include "net/rime.h"
 #include "dev/leds.h"
-#include "../platform/sky/dev/light-sensor.h"
+#include "dev/light-sensor.h"
 #include "cycinc.h"
 
 /*
