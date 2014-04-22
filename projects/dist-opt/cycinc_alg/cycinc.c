@@ -66,15 +66,15 @@ static int16_t cur_cycle = 0;
 /*
  * Local function declarations
  */
-int get_row();
-int get_col();
+int32_t get_row();
+int32_t get_col();
 
 uint8_t is_from_upstream( const rimeaddr_t* from );
 uint8_t abs_diff(uint8_t a, uint8_t b);
 int32_t abs_diff32(int32_t a, int32_t b);
 int32_t norm2(int32_t* a, int32_t* b, int len);
-int32_t g_model(int32_t* iterate);
-int32_t f_model(int32_t* iterate);
+int64_t g_model(int32_t* iterate);
+int64_t f_model(int32_t* iterate);
 
 /*
  * Sub-function
@@ -219,19 +219,19 @@ uint8_t is_from_upstream( const rimeaddr_t* from )
 /*
  * Returns row of node * spacing in cm
  */
-int get_row()
+int32_t get_row()
 {
   int r[] = ID2ROW;
-  return (r[ NODE_ID - START_ID ]) * SPACING;
+  return ((r[ NODE_ID - START_ID ]) * SPACING) << PREC_SHIFT;
 }
 
 /*
  * Returns column of node * spacing in cm
  */
-int get_col()
+int32_t get_col()
 {
   int c[] = ID2COL;
-  return (c[ NODE_ID - START_ID ]) * SPACING;
+  return ((c[ NODE_ID - START_ID ]) * SPACING) << PREC_SHIFT;
 }
 
 /*
@@ -271,7 +271,7 @@ int32_t abs_diff32(int32_t a, int32_t b)
  */
 int32_t g_model(int32_t* iterate)
 {
-  return (get_col() - *(iterate))*(get_col() - *(iterate)) + (get_row() - *(iterate + 1))*(get_row() - *(iterate + 1)) + (*(iterate + 2))*(*(iterate + 2)) + MODEL_B;
+  return ((get_col() - *(iterate))*(get_col() - *(iterate)) + (get_row() - *(iterate + 1))*(get_row() - *(iterate + 1)) + (*(iterate + 2))*(*(iterate + 2))) >> PREC_SHIFT + MODEL_B;
 }
 
 /*
