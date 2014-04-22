@@ -58,7 +58,7 @@
  */ 
 
 //Variable storing previous cycle's local estimate for stop condition
-static int32_t cur_data[DATA_LEN] = {0};
+static int64_t cur_data[DATA_LEN] = {0};
 static int16_t cur_cycle = 0;
 
 
@@ -66,29 +66,29 @@ static int16_t cur_cycle = 0;
 /*
  * Local function declarations
  */
-int32_t get_row();
-int32_t get_col();
+int64_t get_row();
+int64_t get_col();
 
 uint8_t is_from_upstream( const rimeaddr_t* from );
 uint8_t abs_diff(uint8_t a, uint8_t b);
-int32_t abs_diff32(int32_t a, int32_t b);
-int32_t norm2(int32_t* a, int32_t* b, int len);
-int64_t g_model(int32_t* iterate);
-int64_t f_model(int32_t* iterate);
+int64_t abs_diff64(int64_t a, int64_t b);
+int64_t norm2(int64_t* a, int64_t* b, int len);
+int64_t g_model(int64_t* iterate);
+int64_t f_model(int64_t* iterate);
 
 /*
  * Sub-function
  * Computes the next iteration of the algorithm
  */
-static void grad_iterate(int32_t* iterate, int32_t* result, int len)
+static void grad_iterate(int64_t* iterate, int64_t* result, int len)
 {
   int i;
   
   //return iterate;
   //return ( iterate - ((STEP * ( (1 << (NODE_ID + 1))*iterate - (NODE_ID << (PREC_SHIFT + 1)))) >> PREC_SHIFT) );
   
-  int32_t node_loc[3] = {get_col(), get_row(), 0};
-  int32_t reading = light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC);
+  int64_t node_loc[3] = {get_col(), get_row(), 0};
+  int64_t reading = light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC);
   
   for(i = 0; i < len; i++)
   {
@@ -182,7 +182,7 @@ PROCESS_THREAD(main_process, ev, data)
 	etimer_set(&et, CLOCK_SECOND*2);
     PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));  
     
-    int32_t s[3] = START_VAL;
+    int64_t s[3] = START_VAL;
     opt_message_t out;
     
     out.key = MKEY;
@@ -219,7 +219,7 @@ uint8_t is_from_upstream( const rimeaddr_t* from )
 /*
  * Returns row of node * spacing in cm
  */
-int32_t get_row()
+int64_t get_row()
 {
   int r[] = ID2ROW;
   return ((r[ NODE_ID - START_ID ]) * SPACING) << PREC_SHIFT;
@@ -228,7 +228,7 @@ int32_t get_row()
 /*
  * Returns column of node * spacing in cm
  */
-int32_t get_col()
+int64_t get_col()
 {
   int c[] = ID2COL;
   return ((c[ NODE_ID - START_ID ]) * SPACING) << PREC_SHIFT;
@@ -251,12 +251,12 @@ uint8_t abs_diff(uint8_t a, uint8_t b)
 }
 
 /*
- * Returns the absolute difference of two int32_t's, which will
+ * Returns the absolute difference of two int64_t's, which will
  * always be positive.
  */
-int32_t abs_diff32(int32_t a, int32_t b)
+int64_t abs_diff64(int64_t a, int64_t b)
 {
-  int32_t ret;
+  int64_t ret;
   
   if( a > b )
     ret = a - b;
@@ -269,7 +269,7 @@ int32_t abs_diff32(int32_t a, int32_t b)
 /*
  * Computes the denominator of model
  */
-int32_t g_model(int32_t* iterate)
+int64_t g_model(int64_t* iterate)
 {
   return ((get_col() - *(iterate))*(get_col() - *(iterate)) + (get_row() - *(iterate + 1))*(get_row() - *(iterate + 1)) + (*(iterate + 2))*(*(iterate + 2))) >> PREC_SHIFT + MODEL_B;
 }
@@ -277,7 +277,7 @@ int32_t g_model(int32_t* iterate)
 /*
  * Computes the observation model function
  */
-int32_t f_model(int32_t* iterate)
+int64_t f_model(int64_t* iterate)
 {
   return MODEL_A/g_model(iterate) + MODEL_C;
 }
@@ -287,10 +287,10 @@ int32_t f_model(int32_t* iterate)
  * are assumed to be "shifted" by PREC_SHIFT.
  * Does no bounds checking.
  */
-int32_t norm2(int32_t* a, int32_t* b, int len)
+int64_t norm2(int64_t* a, int64_t* b, int len)
 {
   int i;
-  int32_t retval = 0;
+  int64_t retval = 0;
   
   if( a != NULL && b != NULL )
   {
