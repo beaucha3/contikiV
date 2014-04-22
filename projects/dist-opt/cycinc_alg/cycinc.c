@@ -199,6 +199,7 @@ PROCESS_THREAD(main_process, ev, data)
     PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
   }
   
+  SENSORS_DEACTIVATE(light_sensor)
   PROCESS_END();
 }
 
