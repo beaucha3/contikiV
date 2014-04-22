@@ -22,7 +22,7 @@
  */
 #define STEP 2
 #define PREC_SHIFT 9
-#define START_VAL {30 << PREC_SHIFT, 30 << PREC_SHIFT, 5 << PREC_SHIFT}
+#define START_VAL {30 << PREC_SHIFT, 30 << PREC_SHIFT, 10 << PREC_SHIFT}
 #define EPSILON 1       // Epsilon for stopping condition
 
 #define CALIB_C 0       // Set to non-zero to calibrate on reset
@@ -42,6 +42,11 @@
  * Arrays to convert Node ID to row/column
  * Lower left node is at (0,0), and arrays are indexed 
  * with NODE_ID
+ * 16 <- 15 <- 14
+ *  |           |
+ * 17 -> 18    13
+ *     /        |
+ * 10 -> 11 -> 12
  */
 #define ID2ROW { 0, 0, 0, 1, 2, 2, 2, 1, 1 }
 #define ID2COL { 0, 1, 2, 2, 2, 1, 0, 0, 1 }
@@ -56,6 +61,7 @@
 #include "net/rime.h"
 #include "dev/leds.h"
 #include "dev/light-sensor.h"
+#include "dev/button-sensor.h"
 #include "cycinc.h"
 
 /*
@@ -237,8 +243,11 @@ PROCESS_THREAD(main_process, ev, data)
   if(rimeaddr_node_addr.u8[0] == START_NODE_0 &&
     rimeaddr_node_addr.u8[1] == START_NODE_1) 
   {
-	etimer_set(&et, CLOCK_SECOND*2);
-    PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));  
+    SENSORS_ACTIVATE(button_sensor);
+    
+    // Don't start data collection until user button is pressed
+    PROCESS_WAIT_EVENT_UNTIL(ev == sensors_event 
+                          && data == &button_sensor);
     
     int64_t s[3] = START_VAL;
     opt_message_t out;
