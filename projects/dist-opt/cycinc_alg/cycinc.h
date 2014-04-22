@@ -13,7 +13,7 @@ typedef struct opt_message_s
 {
   uint16_t key;         // Unique header
   uint8_t iter;         // Number of nodes the iterate has passed through
-  int32_t data[DATA_LEN];         // Current data step of optimization algorithm
+  int32_t data[DATA_LEN];  // Current data step of optimization algorithm
 }
 opt_message_t;
 

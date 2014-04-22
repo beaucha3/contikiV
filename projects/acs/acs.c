@@ -41,7 +41,7 @@
 #define SIG1      208     // 2*variance of post-change distribution
 #define LOG_S0_S1 5506    // 2048*ln(stdev0/stdev1)
 
-#define THRESHOLD 40000   // This should detect a change within about 4 samples
+#define THRESHOLD 20480l   // This should remove most "noise"
 
 /*
  * Global variables

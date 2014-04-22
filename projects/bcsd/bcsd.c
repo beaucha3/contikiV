@@ -42,7 +42,7 @@
 #include "net/rime.h"
 
 #define TX 0
-#define MY_CHANNEL 130
+#define MY_CHANNEL 100
 
 //#include "dev/button-sensor.h"
 

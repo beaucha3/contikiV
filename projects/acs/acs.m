@@ -6,6 +6,8 @@ port = start_port('/dev/ttyUSB0');
 
 runtime = 500;
 PREC = 2048;        % Precision of Wn
+threshold = 10;
+
 Wn = zeros(1,runtime);
 acc = zeros(1,runtime);
 
@@ -16,6 +18,10 @@ subplot(2,1,1);
 title('Significant Statistic, W_n');
 xlabel('Sample');
 ylabel('W_n');
+subplot(2,1,2);
+title('Acceleration');
+xlabel('Sample');
+ylabel('a');
 
 
 % We are using an ADXL327 with an MSP430 12-bit ADC, Vcc = 3V, which has a 
@@ -42,7 +48,7 @@ while(counter <= runtime)
     figure(1);
     subplot(2,1,1);
     hold on;
-    line([0 counter], [19.53 19.53], 'Color', 'm');   % Threshold
+    line([0 counter], [threshold threshold], 'Color', 'm');   % Threshold
     plot( 1:counter, Wn(1:counter) );
     hold off;
     
