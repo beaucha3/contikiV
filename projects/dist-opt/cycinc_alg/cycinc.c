@@ -104,34 +104,34 @@ static void grad_iterate(int64_t* iterate, int64_t* result, int len)
   /*
    * Bounding Box conditions to bring the iterate back if it strays too far 
    */
-   if(result[1] > (((MAX_COL + 1) * SPACING) << PREC_SHIFT))
+   if(result[0] > (((MAX_COL + 1) * SPACING) << PREC_SHIFT))
    {
-	   result[1] = (((MAX_COL + 1) * SPACING) << PREC_SHIFT);
+	   result[0] = (((MAX_COL + 1) * SPACING) << PREC_SHIFT);
    }
    
-   if(result[1] < (((MIN_COL - 1) * SPACING) << PREC_SHIFT))
+   if(result[0] < (((MIN_COL - 1) * SPACING) << PREC_SHIFT))
    {
-	   result[1] = (((MIN_COL - 1) * SPACING) << PREC_SHIFT);
+	   result[0] = (((MIN_COL - 1) * SPACING) << PREC_SHIFT);
    }
 
-   if(result[2] > (((MAX_ROW + 1) * SPACING) << PREC_SHIFT))
+   if(result[1] > (((MAX_ROW + 1) * SPACING) << PREC_SHIFT))
    {
-	   result[2] = (((MAX_ROW + 1) * SPACING) << PREC_SHIFT);
+	   result[1] = (((MAX_ROW + 1) * SPACING) << PREC_SHIFT);
    }
    
-   if(result[2] < (((ROW_COL - 1) * SPACING) << PREC_SHIFT))
+   if(result[1] < (((MIN_ROW - 1) * SPACING) << PREC_SHIFT))
    {
-	   result[2] = (((ROW_COL - 1) * SPACING) << PREC_SHIFT);
+     result[1] = (((MIN_ROW - 1) * SPACING) << PREC_SHIFT);
    }
    
-   if(result[3] > ((30 * SPACING) << PREC_SHIFT))
+   if(result[2] > ((30 * SPACING) << PREC_SHIFT))
    {
-	   result[3] = ((30 * SPACING) << PREC_SHIFT);
+	   result[2] = ((30 * SPACING) << PREC_SHIFT);
    }
 	  
-   if(result[3] < ((3 * SPACING) << PREC_SHIFT))
+   if(result[2] < ((3 * SPACING) << PREC_SHIFT))
    {
-	   result[3] = ((3 * SPACING) << PREC_SHIFT);
+	   result[2] = ((3 * SPACING) << PREC_SHIFT);
    } 
   
 }

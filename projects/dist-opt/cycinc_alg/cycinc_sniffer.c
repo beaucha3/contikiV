@@ -26,7 +26,7 @@ broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)
   
   for( i=0; i<DATA_LEN; i++ )
   {
-    printf(" %li", msg.data[i]);
+    printf(" %lli", msg.data[i]);
   }
   
   printf("\n");
