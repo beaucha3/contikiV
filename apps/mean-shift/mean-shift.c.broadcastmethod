@@ -1,0 +1,157 @@
+/* This is a very simple change detection algorithm. It will take 50 data samples
+ * to begin and use as a baseline. The mean and standard deviation will be calculated
+ * from this sample set. Thereafter, the main algorithm will take 50 samples every 
+ * second and run the same tests. If the mean has shifted by at least 3 standard
+ * deviations, a change has occurred, and... something will happen. Promise.
+ * Author: Dario Aranguiz
+ */
+
+#include "mean-shift.h"
+#include "contiki.h"
+#include "net/rime.h"
+#include "shell.h"
+#include "shell-collect-view.h"
+#include "collect-view.h"
+
+#include "dev/leds.h"
+#include "dev/light-sensor.h"
+#include "dev/serial-line.h"
+#include <stdio.h>
+#include <string.h>
+
+#define NUM_SAM 50
+
+/*---------------------------------------------------------------------------*/
+static void
+broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)
+{
+	printf("broadcast message received from %d.%d: '%s'\n",
+	       from->u8[0], from->u8[1], (char *)packetbuf_dataptr());
+}
+static const struct broadcast_callbacks broadcast_call = {broadcast_recv};
+static struct broadcast_conn broadcast;
+/*---------------------------------------------------------------------------*/
+uint16_t counter;
+static uint16_t mean_0;
+static uint16_t mean_1;
+static uint16_t stdev_0 = 1;
+/*---------------------------------------------------------------------------*/
+PROCESS(shell_simpledetect_process, "simpledetect");
+SHELL_COMMAND(simpledetect_command,
+	      "simpledetect",
+              "simpledetect: starts a new simple-detect sequence",
+              &shell_simpledetect_process);
+
+PROCESS(shell_init_sample_process, "init-sample");
+SHELL_COMMAND(init_sample_command,
+              "init-sample",
+              "init-sample: gathers initial condition stats",
+              &shell_init_sample_process);
+/*---------------------------------------------------------------------------*/
+PROCESS_THREAD(shell_simpledetect_process, ev, data)
+{
+	static struct etimer etimer;
+	static uint16_t data_sam[NUM_SAM];
+	uint16_t sum = 0;
+
+	PROCESS_EXITHANDLER(leds_off(LEDS_ALL));
+
+	PROCESS_BEGIN();
+
+	SENSORS_ACTIVATE(light_sensor);
+	etimer_set(&etimer, CLOCK_SECOND);
+	PROCESS_WAIT_UNTIL(etimer_expired(&etimer));
+
+	while (1)
+	{
+		blink_LEDs(LEDS_ALL);
+		
+		for (counter = 0; counter < NUM_SAM; counter++)
+		{
+			etimer_set(&etimer, CLOCK_SECOND / NUM_SAM);
+			PROCESS_WAIT_UNTIL(etimer_expired(&etimer));
+			data_sam[counter] = light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC);
+			sum = sum + data_sam[counter];
+		}
+		
+		mean_1 = sum/NUM_SAM - mean_0;
+		if (mean_1 < 0)
+			mean_1 = mean_1 * -1;
+		
+		if (mean_1 > stdev_0 * 2)
+		{
+			leds_on(LEDS_RED);
+			packetbuf_copyfrom("Change detected", strlen("Change detected"));
+			broadcast_send(&broadcast);
+		}
+	}
+
+	PROCESS_END();	
+}
+/*---------------------------------------------------------------------------*/
+PROCESS_THREAD(shell_init_sample_process, ev, data)
+{
+	static uint16_t data_sam[NUM_SAM];
+	uint16_t sum = 0;
+	static struct etimer etimer;
+
+	PROCESS_BEGIN();
+	
+	// Gather NUM_SUM samples over one second of time
+	SENSORS_ACTIVATE(light_sensor);
+	for (counter = 0; counter < NUM_SAM; counter++)
+	{
+		etimer_set(&etimer, CLOCK_SECOND / NUM_SAM); 
+		PROCESS_WAIT_UNTIL(etimer_expired(&etimer));
+		data_sam[counter] = light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC);
+		sum = sum + data_sam[counter];
+	}
+	SENSORS_DEACTIVATE(light_sensor);
+
+	mean_0 = sum/NUM_SAM;
+	stdev_0 = mystdev(&data_sam, mean_0);
+
+	PROCESS_END();
+}
+/*---------------------------------------------------------------------------*/
+void shell_command_list_init(void)
+{
+	broadcast_open(&broadcast, 129, &broadcast_call);
+	shell_register_command(&simpledetect_command);
+	shell_register_command(&init_sample_command);
+}
+
+uint16_t mysqrt(uint16_t num)
+{
+	uint16_t y = 1;
+	for (counter = 0; counter < 20; counter++)
+	{
+		y = (num/y + y) / 2;
+	}
+	return y;
+}
+
+uint16_t mystdev(uint16_t *sample_array, uint16_t mean)
+{
+	uint16_t sum = 0;
+	for (counter = 0; counter < NUM_SAM; counter++)
+	{
+		sum = (sample_array[counter] - mean) * (sample_array[counter] - mean) + sum;
+	}
+	sum = sum / (NUM_SAM - 1);
+        return mysqrt(sum);
+}
+
+// 1/16th second LED blink
+// So what's going on here? With leds_off, ledv, current_leds? 
+void blink_LEDs(unsigned char ledv) 
+{
+	unsigned char current_leds;
+	current_leds = leds_get();
+	leds_on(ledv);
+	clock_delay(125);
+	if (current_leds == LEDS_RED)
+		leds_off(ledv & (~LEDS_RED));
+	else leds_off(ledv);
+}
+

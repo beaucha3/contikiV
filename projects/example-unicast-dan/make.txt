@@ -1,0 +1,39 @@
+using saved target 'sky'
+msp430-objcopy example-unicast-dan.sky -O ihex example-unicast-dan.ihex
+cp example-unicast-dan.ihex tmpimage.ihex
+make sky-reset sky-upload
+using saved target 'sky'
+make[1]: Entering directory `/home/dan/College/6/contikiV/projects/example-unicast-dan'
+make -k -j 20 sky-reset-sequence
+using saved target 'sky'
+make[2]: Entering directory `/home/dan/College/6/contikiV/projects/example-unicast-dan'
+/home/dan/College/6/contikiV/tools/sky/msp430-bsl-linux --telosb -c /dev/ttyUSB0 -r
+MSP430 Bootstrap Loader Version: 1.39-telos-7
+Use -h for help
+Reset device ...
+Done
+make[2]: Leaving directory `/home/dan/College/6/contikiV/projects/example-unicast-dan'
+make -j 20 sky-upload-sequence
+using saved target 'sky'
+make[2]: Entering directory `/home/dan/College/6/contikiV/projects/example-unicast-dan'
++++++ Erasing /dev/ttyUSB0
+MSP430 Bootstrap Loader Version: 1.39-telos-7
+Use -h for help
+Mass Erase...
+Transmit default password ...
++++++ Programming /dev/ttyUSB0
+MSP430 Bootstrap Loader Version: 1.39-telos-7
+Invoking BSL...
+Transmit default password ...
+Current bootstrap loader version: 1.61 (Device ID: f16c)
+Changing baudrate to 38400 ...
+Program ...
+21470 bytes programmed.
++++++ Resetting /dev/ttyUSB0
+MSP430 Bootstrap Loader Version: 1.39-telos-7
+Use -h for help
+Reset device ...
+Done
+make[2]: Leaving directory `/home/dan/College/6/contikiV/projects/example-unicast-dan'
+make[1]: Leaving directory `/home/dan/College/6/contikiV/projects/example-unicast-dan'
+rm example-unicast-dan.ihex

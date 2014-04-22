@@ -1,0 +1,460 @@
+/* This basically is a sequence the sensor will run that spits out a data 'notification' when the CUSUM has been reached */
+
+#include "cusum-seq.h"
+#include "contiki.h"
+#include "net/rime.h"
+#include "shell.h"
+#include "shell-collect-view.h"
+#include "collect-view.h"
+
+#include "dev/leds.h"
+#include "dev/light-sensor.h"
+#include "dev/serial-line.h"
+#include <stdio.h>
+#include <string.h>
+
+// Set this no higher than 35 samples
+#define NUM_SAM 50
+
+// Set to 1 if we want the test to stop after a decision has been met.
+// Setting to 0 causes observations to be transmitted when decision == 1,
+// runs continuously until a killall command is sent to it.
+#define STOP_MODE 0
+
+/*---------------------------------------------------------------------------*/
+static struct mesh_conn mesh;
+
+static void
+sent(struct mesh_conn *c)
+{
+  printf("packet sent\n");
+}
+
+static void
+timedout(struct mesh_conn *c)
+{
+  printf("packet timedout\n");
+}
+
+static void
+recv(struct mesh_conn *c, const rimeaddr_t *from, uint8_t hops)
+{
+  printf("Data received from %d.%d: %.*s (%d)\n",
+	 from->u8[0], from->u8[1],
+	 packetbuf_datalen(), (char *)packetbuf_dataptr(), packetbuf_datalen());
+
+  packetbuf_copyfrom("Der\n", strlen("Der\n"));
+  mesh_send(&mesh, from);
+}
+/*---------------------------------------------------------------------------*/
+static void
+recv_uc(struct unicast_conn *c, const rimeaddr_t *from) {
+	printf("%d.%d: unicast message:\n", from->u8[0], from->u8[1]);
+	printf("%s\n",(char *)packetbuf_dataptr());
+	printf("%d.%d: unicast message over\n", from->u8[0], from->u8[1]);
+}
+/*---------------------------------------------------------------------------*/
+
+uint16_t counter;
+static uint16_t mean_0;
+static uint16_t mean_1;
+static uint16_t std_dev_0 = 1;
+static uint16_t std_dev_1 = 1;
+static const struct unicast_callbacks unicast_callbacks = {recv_uc};
+static struct unicast_conn uc;
+const static struct mesh_callbacks callbacks = {recv, sent, timedout};
+
+/*---------------------------------------------------------------------------*/
+PROCESS(shell_sequence_process, "sequence");
+SHELL_COMMAND(sequence_command,
+	      "sequence",
+	      "sequence: starts a new CUSUM change detection sequence",
+	      &shell_sequence_process);
+PROCESS(shell_seq_data0_process, "seq-data0");
+SHELL_COMMAND(seq_data0_command,
+		"seq-data0",
+		"seq-data0: gathers data for the pre-change stats",
+		&shell_seq_data0_process);
+PROCESS(shell_seq_data1_process, "seq-data1");
+SHELL_COMMAND(seq_data1_command,
+		"seq-data1",
+		"seq-data1: gathers data for the post-change stats",
+		&shell_seq_data1_process);
+PROCESS(shell_seq_stats_process, "seq-stats");
+SHELL_COMMAND(seq_stats_command,
+		"seq-stats",
+		"seq-stats: prints out the current data stats",
+		&shell_seq_stats_process);
+/*---------------------------------------------------------------------------*/
+PROCESS_THREAD(shell_sequence_process, ev, data) {
+
+	static struct etimer etimer;
+
+	PROCESS_EXITHANDLER(leds_off(LEDS_ALL));
+
+	PROCESS_BEGIN();
+
+	static uint16_t temp3;
+	temp3 = mylog(std_dev_0/std_dev_1);
+
+	// Error probability parameters
+	// alpha = 0.001 - Probability of false alarm.
+	// beta = 0.001 - Probability of miss.
+	static int b = 7;	// b = log((1-beta)/alpha) = 6.9068
+
+	// Variables
+	uint16_t observation;
+	static int16_t S_n;
+	// Make sure to actually reset S_n every time we run a sequence.
+	S_n = 0;
+	static int16_t suff_stat = 0;
+	static int16_t min_level;
+	min_level = 0;
+	uint16_t temp1 = 0;
+	uint16_t temp2 = 0;
+	static int decision;
+	// Make sure to actually reset decision every time we run a sequence.
+	decision = 0;
+	int a = 0;
+	int c = 0;
+
+	etimer_set(&etimer, (CLOCK_SECOND / 16));
+
+	while(1) {
+
+		blink_LEDs(LEDS_ALL);
+
+		// Get reading from sensor.
+		SENSORS_ACTIVATE(light_sensor);
+
+		// Give the sensors time to activate before taking a reading.
+		PROCESS_WAIT_UNTIL(etimer_expired(&etimer));
+		etimer_set(&etimer, 11 * (CLOCK_SECOND / 16));
+		observation = light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC);
+		SENSORS_DEACTIVATE(light_sensor);
+
+		printf("cusum-seq: observation = %d\n",observation);
+
+		// Calculate new statistic based on:
+		// suff_stat = log(std_dev_0/std_dev_1)
+		// - ((observation - mean_1)^2) / (2*(std_dev_1^2)
+		// + ((observation - mean_0)^2) / (2*(std_dev_0^2)	
+		//suff_stat =  log(std_dev_0 / std_dev_1) - pow2(observation - mean_1) / (2*pow2(std_dev_1)) + pow2(observation - mean_0) / (2*pow2(std_dev_0));
+
+		a = abs_sub(observation, mean_1);
+		c = abs_sub(observation, mean_0);
+
+		// If a or c is too large, calculating temp1 or temp2 can be tough.
+		temp1 = temp3 + log_exp_term(c, std_dev_0);
+		temp2 = log_exp_term(a, std_dev_1);
+		suff_stat = temp1 - temp2;
+
+		// Do appropriate overflow protection.
+		if(S_n/2 + suff_stat/2 > 16384 ) {
+			S_n = 32767;
+		} else if( S_n/2 + suff_stat/2 < -16384) {
+			S_n = -32768;
+		} else {
+			S_n = S_n + suff_stat;
+		}
+
+		// Reset the min_level appropriately.
+		if(S_n < min_level) {
+			min_level = S_n;
+		}
+
+		// DEBUG CODE
+		printf("cusum-seq: min_level = %d\n",min_level);
+		printf("cusum-seq: S_n = %d\n\n",S_n);
+
+			
+		// Make decision based on statistic.
+		if(S_n >= b + min_level) {
+			
+			leds_on(LEDS_RED);
+
+			// TODO:Transmit detection notice to the sink node.
+
+			// Send out an observation of data if change detected.
+			collect_data(&sequence_command);
+
+			//PROCESS_END();
+			if(STOP_MODE) {
+				leds_off(LEDS_RED);
+				PROCESS_EXIT();
+			}
+		}
+
+		PROCESS_WAIT_UNTIL(etimer_expired(&etimer));
+	}
+
+	PROCESS_END();
+}
+/*---------------------------------------------------------------------------*/
+PROCESS_THREAD(shell_seq_data0_process, ev, data) {
+
+	static uint16_t data_sam[NUM_SAM]; 
+	uint16_t sum = 0;
+	uint16_t sqsum = 0;
+	static struct etimer etimer;
+
+	PROCESS_BEGIN();
+
+	// Gather NUM_SAM samples over 1 second of time
+	SENSORS_ACTIVATE(light_sensor);
+	printf("cusum-seq: Gathering pre-change data... ");
+	for(counter = 0;counter < NUM_SAM;counter++) {
+		// Get data for no change analysis.
+		etimer_set(&etimer, CLOCK_SECOND / NUM_SAM);
+		PROCESS_WAIT_UNTIL(etimer_expired(&etimer));
+		data_sam[counter] = light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC);
+	}
+	printf("done!\n");
+	SENSORS_DEACTIVATE(light_sensor);
+
+	// Sum the no change data
+	sum = 0;
+	for(counter = 0;counter < NUM_SAM;counter++) {
+		sum = sum + data_sam[counter];
+	}
+	mean_0 = 0;
+	printf("cusum-seq: sum = %d\n",sum);
+	mean_0 = sum/NUM_SAM;		// 155.3130
+	printf("cusum-seq: mean_0 = %d\n",mean_0);
+
+	// Caclulate std_dev_0
+	sqsum = 0;
+	for(counter = 0;counter < NUM_SAM;counter++) {
+		sqsum = sqsum + mypow2(abs_sub(data_sam[counter], mean_0));
+	}
+	std_dev_0 = 0;
+	std_dev_0 = sqsum/NUM_SAM;	// 0.9947
+	std_dev_0 = mysqrt(std_dev_0);
+	printf("cusum-seq: std_dev_0 = %d\n",std_dev_0);
+	
+	// DEBUG CODE
+	blink_LEDs(LEDS_ALL);
+
+	PROCESS_END();
+}
+/*---------------------------------------------------------------------------*/
+PROCESS_THREAD(shell_seq_data1_process, ev, data) {
+
+	static uint16_t data_sam[NUM_SAM]; 
+	uint16_t sum = 0;
+	uint16_t sqsum = 0;
+	static struct etimer etimer;
+
+	PROCESS_BEGIN();
+
+
+	//DEBUG CODE
+	printf("cusum-seq: Gathering post-change data... ");
+
+
+	// Gather NUM_SAM samples over 1 second of time
+	SENSORS_ACTIVATE(light_sensor);
+	for(counter = 0;counter < NUM_SAM;counter++) {
+		// Get data for no change analysis.
+		etimer_set(&etimer, CLOCK_SECOND / NUM_SAM);
+		PROCESS_WAIT_UNTIL(etimer_expired(&etimer));
+		data_sam[counter] = light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC);
+	}
+	printf("done!\n");
+	SENSORS_DEACTIVATE(light_sensor);
+	
+	sum = 0;
+	sqsum = 0;
+
+	// Sum the change data
+	for(counter = 0;counter < NUM_SAM;counter++) {
+		sum = sum + data_sam[counter];
+	}
+	printf("cusum-seq: sum = %d\n",sum);
+	mean_1 = sum/NUM_SAM;		// 542.3846
+	printf("mean_1 = %d\n",mean_1);
+
+	// Caclulate std_dev_1
+	for(counter = 0;counter < NUM_SAM;counter++) {
+		sqsum = sqsum + mypow2(abs_sub(data_sam[counter], mean_1));
+	}
+	std_dev_1 = sqsum/NUM_SAM;	// 16.8388
+	std_dev_1 = mysqrt(std_dev_1);
+	printf("cusum-seq: std_dev_1 = %d\n",std_dev_1);
+
+	// DEBUG CODE
+	blink_LEDs(LEDS_ALL);
+
+	PROCESS_END();
+}
+/*---------------------------------------------------------------------------*/
+PROCESS_THREAD(shell_seq_stats_process, ev, data) {
+
+	PROCESS_BEGIN();
+
+	// Print out the data distribution stats, to both the local serial and
+	// broadcast over the network as a reposnse to a call.
+
+	char message[65];
+	strcpy(message,"mean_0 = ");			// 9 chars
+	char num[5];
+	itoa(mean_0, num, 10);
+	strcat(message,num);					// 5 chars
+
+	strcat(message,"\nmean_1 = ");			// 10 chars
+	itoa(mean_1, num, 10);
+	strcat(message,num);					// 5 chars
+
+	strcat(message,"\nstd_dev_0 = ");		// 13 chars
+	itoa(std_dev_0, num, 10);
+	strcat(message,num);					// 5 chars
+
+	strcat(message,"\nstd_dev_1 = ");		// 13 chars
+	itoa(std_dev_1, num, 10);
+	strcat(message,num);					// 5 chars
+
+											// Total = 65 chars
+
+	packetbuf_copyfrom(message, sizeof(message));
+
+	rimeaddr_t addr;
+
+	/*
+	Addresses of the nodes:
+	1: 97.43
+	2: 88.56
+	4: 62.41
+	*/
+
+	addr.u8[0] = 62;
+	addr.u8[1] = 41;
+	/*if(!rimeaddr_cmp(&addr, &rimeaddr_node_addr)) {
+		unicast_send(&uc, &addr);
+	}*/
+    mesh_send(&mesh, &addr);
+
+	// Print out the message on the local serial port.
+	printf("%s\n",message);
+
+	blink_LEDs(LEDS_ALL);
+
+	PROCESS_END();
+
+}
+/*---------------------------------------------------------------------------*/
+void shell_sequence_init(void) {
+//	unicast_open(&uc, 146, &unicast_callbacks);
+	mesh_open(&mesh, 132, &callbacks);
+	shell_register_command(&sequence_command);
+	shell_register_command(&seq_data0_command);
+	shell_register_command(&seq_data1_command);
+	shell_register_command(&seq_stats_command);
+}
+/*---------------------------------------------------------------------------*/
+
+// 1/16th second LED blink.
+void blink_LEDs(unsigned char ledv) {
+	unsigned char current_leds;	
+	current_leds = leds_get();
+	leds_on(ledv);
+	clock_delay(125);
+	if(current_leds == LEDS_RED) {
+		leds_off(ledv & (~LEDS_RED));
+	} else {
+		leds_off(ledv);
+	}
+}
+
+// Collect data function.  Identical to the collect-view-data process, but a function.
+void collect_data(struct shell_command *c) {
+	struct collect_view_data_msg msg;
+	struct collect_neighbor *n;
+	uint16_t parent_etx;
+	uint16_t num_neighbors;
+	uint16_t beacon_interval;
+
+	n = collect_neighbor_list_find(&shell_collect_conn.neighbor_list,
+		                         &shell_collect_conn.parent);
+	if(n != NULL) {
+		parent_etx = collect_neighbor_link_estimate(n);
+	} else {
+		parent_etx = 0;
+	}
+	num_neighbors = collect_neighbor_list_num(&shell_collect_conn.neighbor_list);
+	beacon_interval = broadcast_announcement_beacon_interval() / CLOCK_SECOND;
+
+	collect_view_construct_message(&msg, &shell_collect_conn.parent,
+		                         parent_etx, shell_collect_conn.rtmetric,
+		                         num_neighbors, beacon_interval);
+	shell_output(c, &msg, sizeof(msg), "", 0);
+}
+
+// |var1 - var2|
+uint16_t abs_sub(uint16_t var1, uint16_t var2) {
+
+	if(var1 > var2) {
+		return var1 - var2;
+	} else {
+		return var2 - var1;
+	}
+}
+
+// A basic squaring operation.
+uint16_t mypow2(uint16_t base) {
+
+	uint16_t result;
+
+	// Overflow checking...
+	if(base > 255) {
+		// Overflow will occur... flag w/ negative output
+		result = -1;
+	} else {
+		// No overflow will occur
+		result = base * base;
+	}
+
+	return result;
+}
+
+// Caculate (var1^2) / (2 * (var2^2))
+uint16_t log_exp_term(uint16_t var1, uint16_t var2) {
+
+	uint16_t result;
+
+	if(var2 > var1) {
+		result = 0;
+	} else {
+		result  = mypow2(var1/(2*var2));
+	}
+
+	return result;
+}
+
+// Calculate log(var) (base e), a very crude approximation.
+int mylog(uint16_t var) {
+	int Nis;
+	for(Nis = 0;Nis < 16;Nis++) {
+		if((var>>Nis) <= 1) {
+			break;
+		}
+	}
+	return (69*Nis)/100;
+}
+
+// Calculate the square root of var.
+uint16_t mysqrt(uint16_t var) {
+
+	int Nis;
+	if(var < 1) {
+		return 1;
+	} else {
+		for(Nis = 2; Nis < 255; Nis++) {
+			if(mypow2(Nis) > var) {
+				return Nis - 1;
+			}
+		}
+	}
+	
+	// There has been some kind of error.  Return -1.
+	return -1;
+}
