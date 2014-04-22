@@ -25,9 +25,9 @@
 #define START_VAL {30 << PREC_SHIFT, 30 << PREC_SHIFT, 5 << PREC_SHIFT}
 #define EPSILON 1       // Epsilon for stopping condition
 
-#define MODEL_A 56000 << PREC_SHIFT
-#define MODEL_B 3 << PREC_SHIFT
-#define MODEL_C 72 << PREC_SHIFT
+#define MODEL_A (56000 << PREC_SHIFT)
+#define MODEL_B (3 << PREC_SHIFT)
+#define MODEL_C (72 << PREC_SHIFT)
 #define SPACING 30      // Centimeters of spacing
 
 #define NUM_NODES 9
@@ -92,7 +92,7 @@ static void grad_iterate(int64_t* iterate, int64_t* result, int len)
   
   for(i = 0; i < len; i++)
   {
-    result[i] = iterate[i] - (((STEP * 4 * MODEL_A * (reading - f_model(iterate)) / ((g_model(iterate) * g_model(iterate)) >> PREC_SHIFT)) >> PREC_SHIFT) * (iterate[i] - node_loc[i])) >> PREC_SHIFT;
+    result[i] = iterate[i] - ((((STEP * 4 * (MODEL_A * (reading - f_model(iterate)) / ((g_model(iterate) * g_model(iterate)) >> PREC_SHIFT))) >> PREC_SHIFT) * (iterate[i] - node_loc[i])) >> PREC_SHIFT);
   }
   
 }
@@ -199,7 +199,7 @@ PROCESS_THREAD(main_process, ev, data)
     PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
   }
   
-  SENSORS_DEACTIVATE(light_sensor)
+  SENSORS_DEACTIVATE(light_sensor);
   PROCESS_END();
 }
 
@@ -271,7 +271,14 @@ int64_t abs_diff64(int64_t a, int64_t b)
  */
 int64_t g_model(int64_t* iterate)
 {
-  return ((get_col() - *(iterate))*(get_col() - *(iterate)) + (get_row() - *(iterate + 1))*(get_row() - *(iterate + 1)) + (*(iterate + 2))*(*(iterate + 2))) >> PREC_SHIFT + MODEL_B;
+  int64_t abh[3];
+  
+  abh[0] = get_col();
+  abh[1] = get_row();
+  abh[2] = 0;
+  return ((norm2( iterate, abh, DATA_LEN )) >> PREC_SHIFT) + MODEL_B;
+  
+  //return ((get_col() - iterate[0])*(get_col() - iterate[0]) + (get_row() - iterate[1])*(get_row() - iterate[1]) + (iterate[2])*(iterate[2])) >> PREC_SHIFT + MODEL_B;
 }
 
 /*
