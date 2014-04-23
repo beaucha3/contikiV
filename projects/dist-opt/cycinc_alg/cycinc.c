@@ -38,6 +38,10 @@
 #define NODE_ID (rimeaddr_node_addr.u8[0])
 #define MAX_ITER 500
 
+#define DEBUG 0
+#define MAX_RETRANSMISSIONS 4
+#define NUM_HISTORY_ENTRIES 4
+
 /*
  * Arrays to convert Node ID to row/column
  * Lower left node is at (0,0), and arrays are indexed 
@@ -73,7 +77,9 @@ static int64_t cur_data[DATA_LEN] = {0};
 static int16_t cur_cycle = 0;
 static int64_t model_c = 88 << PREC_SHIFT;
 
-
+//Variables to store this node's immediate upstream neighbor and sniffer
+static rimeaddr_t neighbor;
+static rimeaddr_t sniffer;
 
 /*
  * Local function declarations
@@ -81,7 +87,8 @@ static int64_t model_c = 88 << PREC_SHIFT;
 int64_t get_row();
 int64_t get_col();
 
-uint8_t is_from_upstream( const rimeaddr_t* from );
+//uint8_t is_from_upstream( const rimeaddr_t* from );
+
 uint8_t abs_diff(uint8_t a, uint8_t b);
 int64_t abs_diff64(int64_t a, int64_t b);
 int64_t norm2(int64_t* a, int64_t* b, int len);
@@ -110,47 +117,107 @@ static void grad_iterate(int64_t* iterate, int64_t* result, int len)
   /*
    * Bounding Box conditions to bring the iterate back if it strays too far 
    */
-   if(result[0] > (((MAX_COL + 1) * SPACING) << PREC_SHIFT))
-   {
-	   result[0] = (((MAX_COL + 1) * SPACING) << PREC_SHIFT);
-   }
-   
-   if(result[0] < (((MIN_COL - 1) * SPACING) << PREC_SHIFT))
-   {
-	   result[0] = (((MIN_COL - 1) * SPACING) << PREC_SHIFT);
-   }
-
-   if(result[1] > (((MAX_ROW + 1) * SPACING) << PREC_SHIFT))
-   {
-	   result[1] = (((MAX_ROW + 1) * SPACING) << PREC_SHIFT);
-   }
-   
-   if(result[1] < (((MIN_ROW - 1) * SPACING) << PREC_SHIFT))
-   {
-     result[1] = (((MIN_ROW - 1) * SPACING) << PREC_SHIFT);
-   }
-   
-   if(result[2] > ((30 * SPACING) << PREC_SHIFT))
-   {
-	   result[2] = ((30 * SPACING) << PREC_SHIFT);
-   }
-	  
-   if(result[2] < ((3 * SPACING) << PREC_SHIFT))
-   {
-	   result[2] = ((3 * SPACING) << PREC_SHIFT);
-   } 
+   //~ if(result[0] > (((MAX_COL + 1) * SPACING) << PREC_SHIFT))
+   //~ {
+	   //~ result[0] = (((MAX_COL + 1) * SPACING) << PREC_SHIFT);
+   //~ }
+   //~ 
+   //~ if(result[0] < (((MIN_COL - 1) * SPACING) << PREC_SHIFT))
+   //~ {
+	   //~ result[0] = (((MIN_COL - 1) * SPACING) << PREC_SHIFT);
+   //~ }
+//~ 
+   //~ if(result[1] > (((MAX_ROW + 1) * SPACING) << PREC_SHIFT))
+   //~ {
+	   //~ result[1] = (((MAX_ROW + 1) * SPACING) << PREC_SHIFT);
+   //~ }
+   //~ 
+   //~ if(result[1] < (((MIN_ROW - 1) * SPACING) << PREC_SHIFT))
+   //~ {
+     //~ result[1] = (((MIN_ROW - 1) * SPACING) << PREC_SHIFT);
+   //~ }
+   //~ 
+   //~ if(result[2] > ((30 * SPACING) << PREC_SHIFT))
+   //~ {
+	   //~ result[2] = ((30 * SPACING) << PREC_SHIFT);
+   //~ }
+	  //~ 
+   //~ if(result[2] < ((3 * SPACING) << PREC_SHIFT))
+   //~ {
+	   //~ result[2] = ((3 * SPACING) << PREC_SHIFT);
+   //~ } 
   
 }
 
 /*
  * Communications handlers
  */
-static struct broadcast_conn broadcast;
+//static struct broadcast_conn broadcast;
+static struct runicast_conn runicast;
 
-static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)
+/* OPTIONAL: Sender history.
+ * Detects duplicate callbacks at receiving nodes.
+ * Duplicates appear when ack messages are lost. */
+struct history_entry
 {
-  int i;
+  struct history_entry *next;
+  rimeaddr_t addr;
+  uint8_t seq;
+};
+LIST(history_table);
+MEMB(history_mem, struct history_entry, NUM_HISTORY_ENTRIES);
+
+static void
+recv_runicast(struct runicast_conn *c, const rimeaddr_t *from, uint8_t seqno)
+{
+  /* Sender history */
+  struct history_entry *e = NULL;
+  
+  for(e = list_head(history_table); e != NULL; e = e->next) 
+  {
+    if(rimeaddr_cmp(&e->addr, from)) 
+    {
+      break;
+    }
+  }
+  
+  if(e == NULL) 
+  {
+    /* Create new history entry */
+    e = memb_alloc(&history_mem);
+    
+    if(e == NULL)
+    {
+      e = list_chop(history_table); /* Remove oldest at full history */
+    }
+    
+    rimeaddr_copy(&e->addr, from);
+    e->seq = seqno;
+    list_push(history_table, e);
+  } 
+  else 
+  {
+    /* Detect duplicate callback */
+    if(e->seq == seqno) 
+    {
+//       printf("runicast message received from %d.%d, seqno %d (DUPLICATE)\n",
+//              from->u8[0], from->u8[1], seqno);
+      return;
+    }
+    /* Update existing history entry */
+    e->seq = seqno;
+  }
+  
+  /*
+   * Process the packet 
+   */
+   
   static uint8_t stop = 0;
+  neighbor.u8[0] = NODE_ID + 1;
+  neighbor.u8[1] = 0;
+  
+  sniffer.u8[0] = 25;
+  sniffer.u8[1] = 0;
   
   static opt_message_t msg;
   packetbuf_copyto(&msg);  
@@ -160,6 +227,7 @@ static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)
   
 //   printf("%u: %u %u",from->u8[0], msg.iter, msg.key);
 //   
+//   int i;
 //   for( i=0; i<DATA_LEN; i++ )
 //   {
 //     printf(" %"PRIi64, msg.data[i]);
@@ -172,7 +240,7 @@ static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)
    * but double-check to be sure.  Valid packets should start with
    * MKEY, and we're only interested in packets from our neighbors.
    */
-  if( !stop && is_from_upstream(from) )
+  if( !stop /*&& is_from_upstream(from) */)
   {
     /*
      * Stopping condition
@@ -204,8 +272,12 @@ static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)
     out.iter = msg.iter + 1;
     
     packetbuf_copyfrom( &out,sizeof(out) );
-    broadcast_send(&broadcast);
-    
+   
+    //Optionally send another copy of the message to the sniffer node
+    runicast_send(&runicast, &sniffer, MAX_RETRANSMISSIONS);
+   
+    runicast_send(&runicast, &neighbor, MAX_RETRANSMISSIONS);
+      
     memcpy( cur_data, msg.data, DATA_LEN*sizeof(*cur_data) );
     cur_cycle++;    
   }
@@ -213,8 +285,30 @@ static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)
 //   {
 //     printf("Not from neighbor or stopping\n");
 //   }
+  
+//   printf("runicast message received from %d.%d, seqno %d\n",
+//          from->u8[0], from->u8[1], seqno);
 }
-static const struct broadcast_callbacks broadcast_call = {broadcast_recv};
+
+static void sent_runicast(struct runicast_conn *c, const rimeaddr_t *to, uint8_t retransmissions)
+{
+//   printf("runicast message sent to %d.%d, retransmissions %d\n",
+//          to->u8[0], to->u8[1], retransmissions);
+}
+
+static void timedout_runicast(struct runicast_conn *c, const rimeaddr_t *to, uint8_t retransmissions)
+{
+  printf("runicast message timed out when sending to %d.%d, retransmissions %d\n",
+         to->u8[0], to->u8[1], retransmissions);
+}
+
+//static const struct broadcast_callbacks broadcast_call = {broadcast_recv};
+static const struct runicast_callbacks runicast_callbacks = 
+{ 
+  recv_runicast,
+  sent_runicast,
+  timedout_runicast
+};
 
 PROCESS(main_process, "main");
 AUTOSTART_PROCESSES(&main_process);
@@ -222,8 +316,13 @@ AUTOSTART_PROCESSES(&main_process);
 PROCESS_THREAD(main_process, ev, data)
 {
   static struct etimer et;
+  neighbor.u8[0] = NODE_ID + 1;
+  neighbor.u8[1] = 0;
   
-  PROCESS_EXITHANDLER(broadcast_close(&broadcast);)
+  sniffer.u8[0] = 25;
+  sniffer.u8[1] = 0;
+  
+  PROCESS_EXITHANDLER(runicast_close(&runicast);)
   PROCESS_BEGIN();
   
   SENSORS_ACTIVATE(light_sensor);
@@ -231,7 +330,9 @@ PROCESS_THREAD(main_process, ev, data)
   etimer_set(&et, CLOCK_SECOND*2);
   PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
   
-  broadcast_open(&broadcast, COMM_CHANNEL, &broadcast_call);
+  //broadcast_open(&broadcast, COMM_CHANNEL, &broadcast_call);
+  runicast_open(&runicast, 144, &runicast_callbacks);
+
   
 #if CALIB_C > 0
   /*
@@ -272,7 +373,11 @@ PROCESS_THREAD(main_process, ev, data)
     memcpy( out.data, s, DATA_LEN*sizeof(s[0]) );
     
     packetbuf_copyfrom( &out,sizeof(out) );
-    broadcast_send(&broadcast);
+    
+    //Optionally send another copy of the message to the sniffer node
+    runicast_send(&runicast, &sniffer, MAX_RETRANSMISSIONS);
+   
+    runicast_send(&runicast, &neighbor, MAX_RETRANSMISSIONS);
   }
   
   while(1)
@@ -289,14 +394,15 @@ PROCESS_THREAD(main_process, ev, data)
  * Returns non-zero value if m originated from a neighbor node
  * Message is from a neighbor if addr[0] is NODE_ADDR_0 - 1
  */	
-uint8_t is_from_upstream( const rimeaddr_t* from )
-{
-  // Account for previous node.
-  // If we are the first node, MAX_NODES is our upstream neighbor
-  return(  ((NODE_ID) - from->u8[0]) == 1 
-        || ( (NODE_ID==START_ID) 
-           && (from->u8[0]==START_ID + NUM_NODES-1) ) );
-}
+
+//~ uint8_t is_from_upstream( const rimeaddr_t* from )
+//~ {
+  //~ // Account for previous node.
+  //~ // If we are the first node, MAX_NODES is our upstream neighbor
+  //~ return(  ((NODE_ID) - from->u8[0]) == 1 
+        //~ || ( (NODE_ID==START_ID) 
+           //~ && (from->u8[0]==START_ID + NUM_NODES-1) ) );
+//~ }
 
 /*
  * Returns row of node * spacing in cm
