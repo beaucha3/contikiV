@@ -247,7 +247,10 @@ static const struct runicast_callbacks runicast_callbacks =
 PROCESS_THREAD(main_process, ev, data)
 {
   static struct etimer et;
-  neighbor.u8[0] = NODE_ID + 1;
+  if(NODE_ID  == (START_ID + NUM_NODES - 1))
+	neighbor.u8[0] = START_ID;
+  else 
+    neighbor.u8[0] = NODE_ID + 1;
   neighbor.u8[1] = 0;
   
   sniffer.u8[0] = SNIFFER_NODE_0;

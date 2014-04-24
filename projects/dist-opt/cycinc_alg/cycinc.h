@@ -5,14 +5,13 @@
 
 #define MKEY 1156   // Chosen by fair die rolls, guaranteed to be random
 #define MAX_NODES 4     // Number of nodes in topology
-#define COMM_CHANNEL 100
-
+#define COMM_CHANNEL 100l
 #define DATA_LEN 3
 
 typedef struct opt_message_s
 {
   uint16_t key;         // Unique header
-  uint8_t iter;         // Number of nodes the iterate has passed through
+  uint16_t iter;         // Number of nodes the iterate has passed through
   int64_t data[DATA_LEN];  // Current data step of optimization algorithm
 }
 opt_message_t;
