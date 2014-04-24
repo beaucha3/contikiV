@@ -98,6 +98,13 @@ int64_t g_model(int64_t* iterate);
 int64_t f_model(int64_t* iterate);
 
 /*
+ * Processes
+ */
+PROCESS(main_process, "main");
+PROCESS(rx_process, "rx_proc");
+AUTOSTART_PROCESSES(&main_process);
+
+/*
  * Sub-function
  * Computes the next iteration of the algorithm
  */
@@ -210,78 +217,7 @@ recv_runicast(struct runicast_conn *c, const rimeaddr_t *from, uint8_t seqno)
     e->seq = seqno;
   }
   
-  /*
-   * Process the packet 
-   */
-   
-  static uint8_t stop = 0;
-  
-  static opt_message_t msg;
-  packetbuf_copyto(&msg);  
-  
-  opt_message_t out;
-  
-  
-//   printf("%u: %u %u",from->u8[0], msg.iter, msg.key);
-//   
-//   int i;
-//   for( i=0; i<DATA_LEN; i++ )
-//   {
-//     printf(" %"PRIi64, msg.data[i]);
-//   }
-//   
-//   printf("\n");
-  
-  /*
-   * packetbuf_dataptr() should return a pointer to an opt_message_t,
-   * but double-check to be sure.  Valid packets should start with
-   * MKEY, and we're only interested in packets from our neighbors.
-   */
-  if( !stop )
-  {
-    /*
-     * Stopping condition
-     */
-    if (( norm2(cur_data, msg.data, DATA_LEN) <= EPSILON*EPSILON ) &&
-        (cur_cycle > 1) )
-    {
-      stop++;
-    }
-    else
-    {
-      stop = 0;
-    }
-    
-    if(stop == 10 || msg.key == (MKEY + 1) || out.iter >= MAX_ITER)
-    {
-      leds_on(LEDS_ALL);
-      out.key = MKEY + 1;
-      
-      stop = 10;
-    }
-    else if(msg.key == MKEY)
-    {
-      leds_off(LEDS_ALL);
-      out.key = MKEY;
-      grad_iterate( msg.data, out.data, DATA_LEN );
-    }
-    
-    out.iter = msg.iter + 1;
-    
-    packetbuf_copyfrom( &out,sizeof(out) );
-   
-    //Optionally send another copy of the message to the sniffer node
-    runicast_send(&runicast, &sniffer, MAX_RETRANSMISSIONS);
-   
-    runicast_send(&runicast, &neighbor, MAX_RETRANSMISSIONS);
-      
-    memcpy( cur_data, msg.data, DATA_LEN*sizeof(*cur_data) );
-    cur_cycle++;    
-  }
-//   else
-//   {
-//     printf("Not from neighbor or stopping\n");
-//   }
+  process_start(&rx_process, (char*)from);
   
 //   printf("runicast message received from %d.%d, seqno %d\n",
 //          from->u8[0], from->u8[1], seqno);
@@ -307,8 +243,6 @@ static const struct runicast_callbacks runicast_callbacks =
   timedout_runicast
 };
 
-PROCESS(main_process, "main");
-AUTOSTART_PROCESSES(&main_process);
 /*-------------------------------------------------------------------*/
 PROCESS_THREAD(main_process, ev, data)
 {
@@ -371,8 +305,23 @@ PROCESS_THREAD(main_process, ev, data)
     
     packetbuf_copyfrom( &out,sizeof(out) );
     
-    //Optionally send another copy of the message to the sniffer node
+    while( runicast_is_transmitting(&runicast) )
+    {
+      static struct etimer et;
+      
+      etimer_set(&et, CLOCK_SECOND/32);
+      PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+    }
+    
     runicast_send(&runicast, &sniffer, MAX_RETRANSMISSIONS);
+    
+    while( runicast_is_transmitting(&runicast) )
+    {
+      static struct etimer et;
+      
+      etimer_set(&et, CLOCK_SECOND/32);
+      PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+    }
    
     runicast_send(&runicast, &neighbor, MAX_RETRANSMISSIONS);
   }
@@ -384,6 +333,116 @@ PROCESS_THREAD(main_process, ev, data)
   }
   
   SENSORS_DEACTIVATE(light_sensor);
+  PROCESS_END();
+}
+
+
+/*
+ * Started when a runicast packet is received.
+ * 
+ * 'data' is the 'from' pointer
+ */
+PROCESS_THREAD(rx_process, ev, data)
+{
+  PROCESS_BEGIN();
+  /*
+   * Process the packet 
+   */
+  
+  static uint8_t stop = 0;
+  
+  static opt_message_t msg;
+  packetbuf_copyto(&msg);  
+  
+  static opt_message_t out;
+  
+  
+  //   printf("%u: %u %u",from->u8[0], msg.iter, msg.key);
+  //   
+  //   int i;
+  //   for( i=0; i<DATA_LEN; i++ )
+  //   {
+  //     printf(" %"PRIi64, msg.data[i]);
+  //   }
+  //   
+  //   printf("\n");
+  
+  /*
+   * packetbuf_dataptr() should return a pointer to an opt_message_t,
+   * but double-check to be sure.  Valid packets should start with
+   * MKEY, and we're only interested in packets from our neighbors.
+   */
+  if( !stop )
+  {
+    /*
+     * Stopping condition
+     */
+    if (( norm2(cur_data, msg.data, DATA_LEN) <= EPSILON*EPSILON ) &&
+      (cur_cycle > 1) )
+    {
+      stop++;
+    }
+    else
+    {
+      stop = 0;
+    }
+    
+    if(stop == 10 || msg.key == (MKEY + 1) || out.iter >= MAX_ITER)
+    {
+      leds_on(LEDS_ALL);
+      out.key = MKEY + 1;
+      
+      stop = 10;
+    }
+    else if(msg.key == MKEY)
+    {
+      leds_off(LEDS_ALL);
+      out.key = MKEY;
+      grad_iterate( msg.data, out.data, DATA_LEN );
+    }
+    
+    out.iter = msg.iter + 1;
+    
+    while( runicast_is_transmitting(&runicast) )
+    {
+      static struct etimer et;
+      
+      etimer_set(&et, CLOCK_SECOND/32);
+      PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+    }
+    
+    packetbuf_copyfrom( &out,sizeof(out) );
+    runicast_send(&runicast, &sniffer, MAX_RETRANSMISSIONS);
+    
+    while( runicast_is_transmitting(&runicast) )
+    {
+      static struct etimer et;
+      
+      etimer_set(&et, CLOCK_SECOND/32);
+      PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+    }
+    
+    packetbuf_copyfrom( &out,sizeof(out) );
+    runicast_send(&runicast, &neighbor, MAX_RETRANSMISSIONS);
+    
+    // Save data for next time
+    memcpy( cur_data, msg.data, DATA_LEN*sizeof(*cur_data) );
+    cur_cycle++;  
+    
+    // Wait until we are done transmitting
+    while( runicast_is_transmitting(&runicast) )
+    {
+      static struct etimer et;
+      
+      etimer_set(&et, CLOCK_SECOND/32);
+      PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+    }
+  }
+  //   else
+  //   {
+  //     printf("Not from neighbor or stopping\n");
+  //   }
+  
   PROCESS_END();
 }
 
