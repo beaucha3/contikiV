@@ -179,6 +179,9 @@ MEMB(history_mem, struct history_entry, NUM_HISTORY_ENTRIES);
 static void
 recv_runicast(struct runicast_conn *c, const rimeaddr_t *from, uint8_t seqno)
 {
+   printf("runicast message received from %d.%d, seqno %d\n",
+          from->u8[0], from->u8[1], seqno);
+  
   /* Sender history */
   struct history_entry *e = NULL;
   
@@ -218,15 +221,12 @@ recv_runicast(struct runicast_conn *c, const rimeaddr_t *from, uint8_t seqno)
   }
   
   process_start(&rx_process, (char*)from);
-  
-//   printf("runicast message received from %d.%d, seqno %d\n",
-//          from->u8[0], from->u8[1], seqno);
 }
 
 static void sent_runicast(struct runicast_conn *c, const rimeaddr_t *to, uint8_t retransmissions)
 {
-//   printf("runicast message sent to %d.%d, retransmissions %d\n",
-//          to->u8[0], to->u8[1], retransmissions);
+   printf("runicast message sent to %d.%d, retransmissions %d\n",
+          to->u8[0], to->u8[1], retransmissions);
 }
 
 static void timedout_runicast(struct runicast_conn *c, const rimeaddr_t *to, uint8_t retransmissions)
@@ -296,14 +296,12 @@ PROCESS_THREAD(main_process, ev, data)
     etimer_set(&et, CLOCK_SECOND*2);
     PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
     
-    int64_t s[3] = START_VAL;
-    opt_message_t out;
+    static int64_t s[3] = START_VAL;
+    static opt_message_t out;
     
     out.key = MKEY;
     out.iter = 0;
     memcpy( out.data, s, DATA_LEN*sizeof(s[0]) );
-    
-    packetbuf_copyfrom( &out,sizeof(out) );
     
     while( runicast_is_transmitting(&runicast) )
     {
@@ -313,6 +311,7 @@ PROCESS_THREAD(main_process, ev, data)
       PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
     }
     
+    packetbuf_copyfrom( &out,sizeof(out) );
     runicast_send(&runicast, &sniffer, MAX_RETRANSMISSIONS);
     
     while( runicast_is_transmitting(&runicast) )
@@ -323,6 +322,7 @@ PROCESS_THREAD(main_process, ev, data)
       PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
     }
    
+    packetbuf_copyfrom( &out,sizeof(out) );
     runicast_send(&runicast, &neighbor, MAX_RETRANSMISSIONS);
   }
   
@@ -357,16 +357,16 @@ PROCESS_THREAD(rx_process, ev, data)
   static opt_message_t out;
   
   
-  //   printf("%u: %u %u",from->u8[0], msg.iter, msg.key);
-  //   
-  //   int i;
-  //   for( i=0; i<DATA_LEN; i++ )
-  //   {
-  //     printf(" %"PRIi64, msg.data[i]);
-  //   }
-  //   
-  //   printf("\n");
-  
+     printf("%u %u", msg.iter, msg.key);
+     
+     int i;
+     for( i=0; i<DATA_LEN; i++ )
+     {
+       printf(" %"PRIi64, msg.data[i]);
+     }
+     
+     printf("\n");
+       
   /*
    * packetbuf_dataptr() should return a pointer to an opt_message_t,
    * but double-check to be sure.  Valid packets should start with
