@@ -72,7 +72,7 @@ PROCESS_THREAD(runicast_receiver_process, ev, data)
   PROCESS_EXITHANDLER(runicast_close(&runicast);)
   PROCESS_BEGIN();
 
-  runicast_open(&runicast, 144, &runicast_callbacks);
+  runicast_open(&runicast, COMM_CHANNEL, &runicast_callbacks);
 
   while(1) 
   {

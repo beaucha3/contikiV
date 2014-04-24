@@ -35,6 +35,8 @@
 #define START_ID  10    // ID of first node in chain
 #define START_NODE_0 10  // Address of node to start optimization algorithm
 #define START_NODE_1 0
+#define SNIFFER_NODE_0 25
+#define SNIFFER_NODE_1 0
 #define NODE_ID (rimeaddr_node_addr.u8[0])
 #define MAX_ITER 500
 
@@ -213,11 +215,6 @@ recv_runicast(struct runicast_conn *c, const rimeaddr_t *from, uint8_t seqno)
    */
    
   static uint8_t stop = 0;
-  neighbor.u8[0] = NODE_ID + 1;
-  neighbor.u8[1] = 0;
-  
-  sniffer.u8[0] = 25;
-  sniffer.u8[1] = 0;
   
   static opt_message_t msg;
   packetbuf_copyto(&msg);  
@@ -240,7 +237,7 @@ recv_runicast(struct runicast_conn *c, const rimeaddr_t *from, uint8_t seqno)
    * but double-check to be sure.  Valid packets should start with
    * MKEY, and we're only interested in packets from our neighbors.
    */
-  if( !stop /*&& is_from_upstream(from) */)
+  if( !stop )
   {
     /*
      * Stopping condition
@@ -319,8 +316,8 @@ PROCESS_THREAD(main_process, ev, data)
   neighbor.u8[0] = NODE_ID + 1;
   neighbor.u8[1] = 0;
   
-  sniffer.u8[0] = 25;
-  sniffer.u8[1] = 0;
+  sniffer.u8[0] = SNIFFER_NODE_0;
+  sniffer.u8[1] = SNIFFER_NODE_1;
   
   PROCESS_EXITHANDLER(runicast_close(&runicast);)
   PROCESS_BEGIN();
@@ -331,7 +328,7 @@ PROCESS_THREAD(main_process, ev, data)
   PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
   
   //broadcast_open(&broadcast, COMM_CHANNEL, &broadcast_call);
-  runicast_open(&runicast, 144, &runicast_callbacks);
+  runicast_open(&runicast, COMM_CHANNEL, &runicast_callbacks);
 
   
 #if CALIB_C > 0
@@ -354,7 +351,7 @@ PROCESS_THREAD(main_process, ev, data)
 #endif
   
   if(rimeaddr_node_addr.u8[0] == START_NODE_0 &&
-    rimeaddr_node_addr.u8[1] == START_NODE_1) 
+     rimeaddr_node_addr.u8[1] == START_NODE_1) 
   {
     SENSORS_ACTIVATE(button_sensor);
     
@@ -395,14 +392,14 @@ PROCESS_THREAD(main_process, ev, data)
  * Message is from a neighbor if addr[0] is NODE_ADDR_0 - 1
  */	
 
-//~ uint8_t is_from_upstream( const rimeaddr_t* from )
-//~ {
-  //~ // Account for previous node.
-  //~ // If we are the first node, MAX_NODES is our upstream neighbor
-  //~ return(  ((NODE_ID) - from->u8[0]) == 1 
-        //~ || ( (NODE_ID==START_ID) 
-           //~ && (from->u8[0]==START_ID + NUM_NODES-1) ) );
-//~ }
+uint8_t is_from_upstream( const rimeaddr_t* from )
+{
+  // Account for previous node.
+  // If we are the first node, MAX_NODES is our upstream neighbor
+  return(  ((NODE_ID) - from->u8[0]) == 1 
+        || ( (NODE_ID==START_ID) 
+           && (from->u8[0]==START_ID + NUM_NODES-1) ) );
+}
 
 /*
  * Returns row of node * spacing in cm
