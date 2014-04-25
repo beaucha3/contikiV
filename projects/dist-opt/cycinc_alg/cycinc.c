@@ -25,7 +25,7 @@
 #define START_VAL {30ll << PREC_SHIFT, 30ll << PREC_SHIFT, 10ll << PREC_SHIFT}
 #define EPSILON 1       // Epsilon for stopping condition
 
-#define CALIB_C 0  ll     // Set to non-zero to calibrate on reset
+#define CALIB_C 0ll     // Set to non-zero to calibrate on reset
 #define MODEL_A (56000ll << PREC_SHIFT)
 #define MODEL_B (3ll << PREC_SHIFT)
 #define MODEL_C model_c
