@@ -56,10 +56,7 @@
  */
 #define ID2ROW { 0, 0, 0, 1, 2, 2, 2, 1, 1 }
 #define ID2COL { 0, 1, 2, 2, 2, 1, 0, 0, 1 }
-#define MAX_COL 2
-#define MAX_ROW 2
-#define MIN_COL 0
-#define MIN_ROW 0
+
 
 #include "contiki.h"
 #include <stdio.h>
@@ -78,6 +75,14 @@
 static int64_t cur_data[DATA_LEN] = {0};
 static int16_t cur_cycle = 0;
 static int64_t model_c = 88 << PREC_SHIFT;
+
+//Variables for bounding box conditions
+static int64_t max_col = (90l << PREC_SHIFT); 
+static int64_t max_row = (90l << PREC_SHIFT); 
+static int64_t min_col = -1 * (30l << PREC_SHIFT);
+static int64_t min_row = -1 * (30l << PREC_SHIFT);
+static int64_t max_height = (30l << PREC_SHIFT);
+static int64_t min_height = (3l << PREC_SHIFT);  
 
 //Variables to store this node's immediate upstream neighbor and sniffer
 static rimeaddr_t neighbor;
@@ -126,35 +131,37 @@ static void grad_iterate(int64_t* iterate, int64_t* result, int len)
   /*
    * Bounding Box conditions to bring the iterate back if it strays too far 
    */
-   //~ if(result[0] > (((MAX_COL + 1) * SPACING) << PREC_SHIFT))
-   //~ {
-	   //~ result[0] = (((MAX_COL + 1) * SPACING) << PREC_SHIFT);
-   //~ }
-   //~ 
-   //~ if(result[0] < (((MIN_COL - 1) * SPACING) << PREC_SHIFT))
-   //~ {
-	   //~ result[0] = (((MIN_COL - 1) * SPACING) << PREC_SHIFT);
-   //~ }
-//~ 
-   //~ if(result[1] > (((MAX_ROW + 1) * SPACING) << PREC_SHIFT))
-   //~ {
-	   //~ result[1] = (((MAX_ROW + 1) * SPACING) << PREC_SHIFT);
-   //~ }
-   //~ 
-   //~ if(result[1] < (((MIN_ROW - 1) * SPACING) << PREC_SHIFT))
-   //~ {
-     //~ result[1] = (((MIN_ROW - 1) * SPACING) << PREC_SHIFT);
-   //~ }
-   //~ 
-   //~ if(result[2] > ((30 * SPACING) << PREC_SHIFT))
-   //~ {
-	   //~ result[2] = ((30 * SPACING) << PREC_SHIFT);
-   //~ }
-	  //~ 
-   //~ if(result[2] < ((3 * SPACING) << PREC_SHIFT))
-   //~ {
-	   //~ result[2] = ((3 * SPACING) << PREC_SHIFT);
-   //~ } 
+   //printf("result[0] = %"PRIi64" result[1] = %"PRIi64" result[2] = %"PRIi64"\n", result[0], result[1], result[2]);
+   //printf("max_col = %"PRIi64" min_col = %"PRIi64" max_row = %"PRIi64" min_row = %"PRIi64" max_height = %"PRIi64" min_height = %"PRIi64"\n", max_col, min_col, max_row, min_row, max_height, min_height);
+   if(result[0] > max_col)
+   {
+	   result[0] = max_col;
+   }
+   
+   if(result[0] < min_col)
+   {
+	   result[0] = min_col;
+   }
+
+   if(result[1] > max_row)
+   {
+	   result[1] = max_row;
+   }
+   
+   if(result[1] < min_row)
+   {
+     result[1] = min_row;
+   }
+   
+   if(result[2] > max_height)
+   {
+	   result[2] = max_height;
+   }
+	  
+   if(result[2] < min_height)
+   {
+	   result[2] = min_height;
+   } 
   
 }
 
@@ -179,8 +186,8 @@ MEMB(history_mem, struct history_entry, NUM_HISTORY_ENTRIES);
 static void
 recv_runicast(struct runicast_conn *c, const rimeaddr_t *from, uint8_t seqno)
 {
-   printf("runicast message received from %d.%d, seqno %d\n",
-          from->u8[0], from->u8[1], seqno);
+   //printf("runicast message received from %d.%d, seqno %d\n",
+          //from->u8[0], from->u8[1], seqno);
   
   /* Sender history */
   struct history_entry *e = NULL;
@@ -225,14 +232,14 @@ recv_runicast(struct runicast_conn *c, const rimeaddr_t *from, uint8_t seqno)
 
 static void sent_runicast(struct runicast_conn *c, const rimeaddr_t *to, uint8_t retransmissions)
 {
-   printf("runicast message sent to %d.%d, retransmissions %d\n",
-          to->u8[0], to->u8[1], retransmissions);
+   //printf("runicast message sent to %d.%d, retransmissions %d\n",
+          //to->u8[0], to->u8[1], retransmissions);
 }
 
 static void timedout_runicast(struct runicast_conn *c, const rimeaddr_t *to, uint8_t retransmissions)
 {
-  printf("runicast message timed out when sending to %d.%d, retransmissions %d\n",
-         to->u8[0], to->u8[1], retransmissions);
+  //printf("runicast message timed out when sending to %d.%d, retransmissions %d\n",
+         //to->u8[0], to->u8[1], retransmissions);
 }
 
 //static const struct broadcast_callbacks broadcast_call = {broadcast_recv};
@@ -360,15 +367,15 @@ PROCESS_THREAD(rx_process, ev, data)
   static opt_message_t out;
   
   
-     printf("%u %u", msg.iter, msg.key);
-     
-     int i;
-     for( i=0; i<DATA_LEN; i++ )
-     {
-       printf(" %"PRIi64, msg.data[i]);
-     }
-     
-     printf("\n");
+     //~ printf("%u %u", msg.iter, msg.key);
+     //~ 
+     //~ int i;
+     //~ for( i=0; i<DATA_LEN; i++ )
+     //~ {
+       //~ printf(" %"PRIi64, msg.data[i]);
+     //~ }
+     //~ 
+     //~ printf("\n");
        
   /*
    * packetbuf_dataptr() should return a pointer to an opt_message_t,
