@@ -51,23 +51,23 @@ PROCESS_THREAD(main_process, ev, data)
 	etimer_set(&et, CLOCK_SECOND*2);
 	PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
   
-  if( ADC12CTL0 & REFON )
-  {
-    if( ADC12CTL0 & REF2_5V )
-    {
-      packetbuf_copyfrom("Vref=2.5V", 10);
-    }
-    else
-    {
-      packetbuf_copyfrom("Vref=1.5V", 10);
-    }
-  }
-  else
-  {
-    packetbuf_copyfrom("Vref=off", 9);
-  }
-  
-  broadcast_send(&broadcast);
+  //~ if( ADC12CTL0 & REFON )
+  //~ {
+    //~ if( ADC12CTL0 & REF2_5V )
+    //~ {
+      //~ packetbuf_copyfrom("Vref=2.5V", 10);
+    //~ }
+    //~ else
+    //~ {
+      //~ packetbuf_copyfrom("Vref=1.5V", 10);
+    //~ }
+  //~ }
+  //~ else
+  //~ {
+    //~ packetbuf_copyfrom("Vref=off", 9);
+  //~ }
+  //~ 
+  //~ broadcast_send(&broadcast);
   
 	while( 1 )
 	{
