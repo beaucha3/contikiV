@@ -305,6 +305,12 @@ PROCESS_THREAD(main_process, ev, data)
   out.data[1] = 0;
   out.data[2] = 0;
   
+  while( runicast_is_transmitting(&runicast) )
+  {
+    etimer_set(&et, CLOCK_SECOND/32);
+    PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+  }
+  
   packetbuf_copyfrom( &out,sizeof(out) );
   runicast_send(&runicast, &sniffer, MAX_RETRANSMISSIONS);
 #endif
