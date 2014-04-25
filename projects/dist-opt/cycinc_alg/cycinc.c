@@ -254,7 +254,7 @@ static const struct runicast_callbacks runicast_callbacks =
 PROCESS_THREAD(main_process, ev, data)
 {
   
-  int i;
+  static int i;
   model_c = 0;
   static int64_t s[3] = START_VAL;
   static opt_message_t out;
