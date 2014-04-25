@@ -20,16 +20,16 @@
  * Actual step size is STEP/256, this is to keep all computations as 
  * integers
  */
-#define STEP 2
+#define STEP 2ll
 #define PREC_SHIFT 9
-#define START_VAL {30 << PREC_SHIFT, 30 << PREC_SHIFT, 10 << PREC_SHIFT}
+#define START_VAL {30ll << PREC_SHIFT, 30ll << PREC_SHIFT, 10ll << PREC_SHIFT}
 #define EPSILON 1       // Epsilon for stopping condition
 
-#define CALIB_C 0       // Set to non-zero to calibrate on reset
-#define MODEL_A (56000 << PREC_SHIFT)
-#define MODEL_B (3 << PREC_SHIFT)
+#define CALIB_C 0  ll     // Set to non-zero to calibrate on reset
+#define MODEL_A (56000ll << PREC_SHIFT)
+#define MODEL_B (3ll << PREC_SHIFT)
 #define MODEL_C model_c
-#define SPACING 30      // Centimeters of spacing
+#define SPACING 30ll      // Centimeters of spacing
 
 #define NUM_NODES 9
 #define START_ID  10    // ID of first node in chain
@@ -74,15 +74,15 @@
 //Variable storing previous cycle's local estimate for stop condition
 static int64_t cur_data[DATA_LEN] = {0};
 static int16_t cur_cycle = 0;
-static int64_t model_c = 88 << PREC_SHIFT;
+static int64_t model_c = 88ll << PREC_SHIFT;
 
 //Variables for bounding box conditions
-static int64_t max_col = (90l << PREC_SHIFT); 
-static int64_t max_row = (90l << PREC_SHIFT); 
-static int64_t min_col = -1 * (30l << PREC_SHIFT);
-static int64_t min_row = -1 * (30l << PREC_SHIFT);
-static int64_t max_height = (30l << PREC_SHIFT);
-static int64_t min_height = (3l << PREC_SHIFT);  
+static int64_t max_col = (90ll << PREC_SHIFT); 
+static int64_t max_row = (90ll << PREC_SHIFT); 
+static int64_t min_col = -1 * (30ll << PREC_SHIFT);
+static int64_t min_row = -1 * (30ll << PREC_SHIFT);
+static int64_t max_height = (30ll << PREC_SHIFT);
+static int64_t min_height = (3ll << PREC_SHIFT);  
 
 //Variables to store this node's immediate upstream neighbor and sniffer
 static rimeaddr_t neighbor;
@@ -125,7 +125,7 @@ static void grad_iterate(int64_t* iterate, int64_t* result, int len)
   
   for(i = 0; i < len; i++)
   {
-    result[i] = iterate[i] - ((((STEP * 4 * (MODEL_A * (reading - f_model(iterate)) / ((g_model(iterate) * g_model(iterate)) >> PREC_SHIFT))) >> PREC_SHIFT) * (iterate[i] - node_loc[i])) >> PREC_SHIFT);
+    result[i] = iterate[i] - ((((STEP * 4ll * (MODEL_A * (reading - f_model(iterate)) / ((g_model(iterate) * g_model(iterate)) >> PREC_SHIFT))) >> PREC_SHIFT) * (iterate[i] - node_loc[i])) >> PREC_SHIFT);
   }
   
   /*
@@ -475,7 +475,7 @@ uint8_t is_from_upstream( const rimeaddr_t* from )
  */
 int64_t get_row()
 {
-  int r[] = ID2ROW;
+  int64_t r[] = ID2ROW;
   return ((r[ NODE_ID - START_ID ]) * SPACING) << PREC_SHIFT;
 }
 
@@ -484,7 +484,7 @@ int64_t get_row()
  */
 int64_t get_col()
 {
-  int c[] = ID2COL;
+  int64_t c[] = ID2COL;
   return ((c[ NODE_ID - START_ID ]) * SPACING) << PREC_SHIFT;
 }
 
