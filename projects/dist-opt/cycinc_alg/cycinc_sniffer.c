@@ -34,7 +34,7 @@ recv_runicast(struct runicast_conn *c, const rimeaddr_t *from, uint8_t seqno)
 
 	packetbuf_copyto(&msg);
   
-  printf("%u %u", msg.iter, msg.key);
+  printf("%u %u", msg.iter, from->u8[0]);
   
   for( i=0; i<DATA_LEN; i++ )
   {

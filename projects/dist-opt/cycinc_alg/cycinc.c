@@ -25,7 +25,7 @@
 #define START_VAL {30ll << PREC_SHIFT, 30ll << PREC_SHIFT, 10ll << PREC_SHIFT}
 #define EPSILON 1       // Epsilon for stopping condition
 
-#define CALIB_C 0ll     // Set to non-zero to calibrate on reset
+#define CALIB_C 1     // Set to non-zero to calibrate on reset
 #define MODEL_A (56000ll << PREC_SHIFT)
 #define MODEL_B (3ll << PREC_SHIFT)
 #define MODEL_C model_c
@@ -283,6 +283,8 @@ PROCESS_THREAD(main_process, ev, data)
    */
   int i;
   model_c = 0;
+  static int64_t s[3] = START_VAL;
+  static opt_message_t out;
   
   for( i=0; i<50; i++ )
   {
@@ -292,6 +294,16 @@ PROCESS_THREAD(main_process, ev, data)
   }
   
   model_c = (model_c / 50) << PREC_SHIFT;
+  
+  // Sniffer is expecting an opt_message_t
+  out.key = NODE_ID;
+  out.iter = 0;
+  out.data[0] = model_c;
+  out.data[1] = 0;
+  out.data[2] = 0;
+  
+  packetbuf_copyfrom( &out,sizeof(out) );
+  runicast_send(&runicast, &sniffer, MAX_RETRANSMISSIONS);
 #endif
   
   if(rimeaddr_node_addr.u8[0] == START_NODE_0 &&
@@ -305,9 +317,6 @@ PROCESS_THREAD(main_process, ev, data)
     
     etimer_set(&et, CLOCK_SECOND*2);
     PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
-    
-    static int64_t s[3] = START_VAL;
-    static opt_message_t out;
     
     out.key = MKEY;
     out.iter = 0;
