@@ -253,9 +253,10 @@ static const struct runicast_callbacks runicast_callbacks =
 /*-------------------------------------------------------------------*/
 PROCESS_THREAD(main_process, ev, data)
 {
+  PROCESS_EXITHANDLER(runicast_close(&runicast);)
+  PROCESS_BEGIN();
   
   static int i;
-  model_c = 0;
   static int64_t s[3] = START_VAL;
   static opt_message_t out;
   static struct etimer et;
@@ -269,10 +270,7 @@ PROCESS_THREAD(main_process, ev, data)
   
   sniffer.u8[0] = SNIFFER_NODE_0;
   sniffer.u8[1] = SNIFFER_NODE_1;
-  
-  PROCESS_EXITHANDLER(runicast_close(&runicast);)
-  PROCESS_BEGIN();
-  
+    
   SENSORS_ACTIVATE(light_sensor);
   
   etimer_set(&et, CLOCK_SECOND*2);
@@ -288,12 +286,14 @@ PROCESS_THREAD(main_process, ev, data)
    * Takes 50 readings and averages them, storing the value
    * in a global variable, model_c
    */
+  model_c = 0;
   
   for( i=0; i<50; i++ )
   {
     etimer_set(&et, CLOCK_SECOND/50);
     PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
     model_c += light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC);
+    printf("model_c = %"PRIi64"\n", model_c);
   }
   
   model_c = (model_c / 50) << PREC_SHIFT;
