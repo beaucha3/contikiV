@@ -285,11 +285,12 @@ PROCESS_THREAD(main_process, ev, data)
   model_c = 0;
   static int64_t s[3] = START_VAL;
   static opt_message_t out;
+  static struct etimer et;
   
   for( i=0; i<50; i++ )
   {
-    etimer_set(&etimer, CLOCK_SECOND/50);
-    PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&etimer));
+    etimer_set(&et, CLOCK_SECOND/50);
+    PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
     model_c += light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC);
   }
   
@@ -324,8 +325,6 @@ PROCESS_THREAD(main_process, ev, data)
     
     while( runicast_is_transmitting(&runicast) )
     {
-      static struct etimer et;
-      
       etimer_set(&et, CLOCK_SECOND/32);
       PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
     }
@@ -335,8 +334,6 @@ PROCESS_THREAD(main_process, ev, data)
     
     while( runicast_is_transmitting(&runicast) )
     {
-      static struct etimer et;
-      
       etimer_set(&et, CLOCK_SECOND/32);
       PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
     }
