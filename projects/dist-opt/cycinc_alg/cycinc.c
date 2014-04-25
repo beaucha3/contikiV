@@ -253,11 +253,18 @@ static const struct runicast_callbacks runicast_callbacks =
 /*-------------------------------------------------------------------*/
 PROCESS_THREAD(main_process, ev, data)
 {
+  
+  int i;
+  model_c = 0;
+  static int64_t s[3] = START_VAL;
+  static opt_message_t out;
   static struct etimer et;
+  
   if(NODE_ID  == (START_ID + NUM_NODES - 1))
-	neighbor.u8[0] = START_ID;
+    neighbor.u8[0] = START_ID;
   else 
     neighbor.u8[0] = NODE_ID + 1;
+  
   neighbor.u8[1] = 0;
   
   sniffer.u8[0] = SNIFFER_NODE_0;
@@ -281,11 +288,6 @@ PROCESS_THREAD(main_process, ev, data)
    * Takes 50 readings and averages them, storing the value
    * in a global variable, model_c
    */
-  int i;
-  model_c = 0;
-  static int64_t s[3] = START_VAL;
-  static opt_message_t out;
-  static struct etimer et;
   
   for( i=0; i<50; i++ )
   {
