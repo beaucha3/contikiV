@@ -24,7 +24,7 @@ static struct broadcast_conn broadcast;
 //~ };
 
 static void
-broadcast_recv(struct boradcast_conn *c, const rimeaddr_t *from)
+broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)
 {
   //printf("broadcast message received from %d.%d: '%s'\n",
           //from->u8[0], from->u8[1], (char *)packetbuf_dataptr());
