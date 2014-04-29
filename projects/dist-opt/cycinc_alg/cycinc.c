@@ -259,10 +259,16 @@ static const struct runicast_callbacks runicast_callbacks =
   timedout_runicast
 };
 
+void comms_close(struct runicast_conn *c, struct broadcast_conn *b)
+{
+  runicast_close(c);
+  broadcast_close(b);
+}
+
 /*-------------------------------------------------------------------*/
 PROCESS_THREAD(main_process, ev, data)
 {
-  PROCESS_EXITHANDLER(runicast_close(&runicast);)
+  PROCESS_EXITHANDLER(comms_close(&runicast, &broadcast);)
   PROCESS_BEGIN();
   
   static int i;

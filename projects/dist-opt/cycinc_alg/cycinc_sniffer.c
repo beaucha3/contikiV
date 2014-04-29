@@ -24,7 +24,7 @@ static struct broadcast_conn broadcast;
 //~ };
 
 static void
-recv_broadcast(struct boradcast_conn *c, const rimeaddr_t *from)
+broadcast_recv(struct boradcast_conn *c, const rimeaddr_t *from)
 {
   //printf("broadcast message received from %d.%d: '%s'\n",
           //from->u8[0], from->u8[1], (char *)packetbuf_dataptr());
@@ -66,13 +66,13 @@ static const struct broadcast_callbacks broadcast_call = {broadcast_recv};
 //~ };
 
 /*---------------------------------------------------------------------------*/
-PROCESS_THREAD(runicast_receiver_process, ev, data)
+PROCESS_THREAD(broadcast_receiver_process, ev, data)
 {
   static struct etimer et;
-  PROCESS_EXITHANDLER(runicast_close(&runicast);)
+  PROCESS_EXITHANDLER(broadcast_close(&broadcast);)
   PROCESS_BEGIN();
 
-  broadcast_open(&runicast, SNIFFER_CHANNEL, &broadcast_call);
+  broadcast_open(&broadcast, SNIFFER_CHANNEL, &broadcast_call);
 
   while(1) 
   {
