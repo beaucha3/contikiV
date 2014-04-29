@@ -372,7 +372,7 @@ PROCESS_THREAD(main_process, ev, data)
     
     leds_on( LEDS_RED );
     
-    etimer_set(&et, CLOCK_SECOND * 2 );
+    etimer_set(&et, CLOCK_SECOND / 8 );
     PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
     
     leds_off( LEDS_RED );
