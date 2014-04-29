@@ -126,7 +126,11 @@ static void grad_iterate(int64_t* iterate, int64_t* result, int len)
     int64_t g = g_model(iterate);
     int64_t gsq = (g*g) >> PREC_SHIFT;
     
-    result[i] = iterate[i] - ((((STEP * 4ll * (MODEL_A * (reading - f) / gsq)) >> PREC_SHIFT) * (iterate[i] - node_loc[i])) >> PREC_SHIFT);
+    /*
+     * ( MODEL_A * (reading - f) * (iterate[i] - node_loc[i]) ) needs at 
+     * most 58 bits, and after the division, is at least 4550.
+     */
+    result[i] = iterate[i] - ( (4ll * STEP * ( ((MODEL_A * (reading - f) * (iterate[i] - node_loc[i])) / gsq) >> PREC_SHIFT)) >> PREC_SHIFT);
     
 //     result[i] = iterate[i] - ((((STEP * 4ll * (MODEL_A * (reading - f_model(iterate)) / ((g_model(iterate) * g_model(iterate)) >> PREC_SHIFT))) >> PREC_SHIFT) * (iterate[i] - node_loc[i])) >> PREC_SHIFT);
   }
