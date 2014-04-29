@@ -117,15 +117,18 @@ static void grad_iterate(int64_t* iterate, int64_t* result, int len)
 {
   int i;
   
-  //return iterate;
-  //return ( iterate - ((STEP * ( (1 << (NODE_ID + 1))*iterate - (NODE_ID << (PREC_SHIFT + 1)))) >> PREC_SHIFT) );
-  
   int64_t node_loc[3] = {get_col(), get_row(), 0};
   int64_t reading = light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC) << PREC_SHIFT;
   
   for(i = 0; i < len; i++)
   {
-    result[i] = iterate[i] - ((((STEP * 4ll * (MODEL_A * (reading - f_model(iterate)) / ((g_model(iterate) * g_model(iterate)) >> PREC_SHIFT))) >> PREC_SHIFT) * (iterate[i] - node_loc[i])) >> PREC_SHIFT);
+    int64_t f = f_model(iterate);
+    int64_t g = g_model(iterate);
+    int64_t gsq = (g*g) >> PREC_SHIFT;
+    
+    result[i] = iterate[i] - ((((STEP * 4ll * (MODEL_A * (reading - f) / gsq)) >> PREC_SHIFT) * (iterate[i] - node_loc[i])) >> PREC_SHIFT);
+    
+//     result[i] = iterate[i] - ((((STEP * 4ll * (MODEL_A * (reading - f_model(iterate)) / ((g_model(iterate) * g_model(iterate)) >> PREC_SHIFT))) >> PREC_SHIFT) * (iterate[i] - node_loc[i])) >> PREC_SHIFT);
   }
   
   /*
