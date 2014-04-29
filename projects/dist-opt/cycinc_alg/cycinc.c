@@ -367,8 +367,15 @@ PROCESS_THREAD(main_process, ev, data)
   
   while(1)
   {
-    etimer_set(&et, CLOCK_SECOND * 4 );
+    etimer_set(&et, CLOCK_SECOND * 2 );
     PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+    
+    leds_on( LEDS_RED );
+    
+    etimer_set(&et, CLOCK_SECOND * 2 );
+    PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+    
+    leds_off( LEDS_RED );
   }
   
   SENSORS_DEACTIVATE(light_sensor);
@@ -428,14 +435,14 @@ PROCESS_THREAD(rx_process, ev, data)
     
     if(stop == 10 || msg.key == (MKEY + 1) || out.iter >= MAX_ITER)
     {
-      leds_on(LEDS_ALL);
+      leds_on( LEDS_BLUE );
       out.key = MKEY + 1;
       
       stop = 10;
     }
     else if(msg.key == MKEY)
     {
-      leds_off(LEDS_ALL);
+      leds_off( LEDS_BLUE );
       out.key = MKEY;
       grad_iterate( msg.data, out.data, DATA_LEN );
     }
