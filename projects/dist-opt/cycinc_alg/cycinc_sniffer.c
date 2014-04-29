@@ -8,23 +8,23 @@
 //#include "shell.h"
 #include "cycinc.h"
 /*---------------------------------------------------------------------------*/
-PROCESS(runicast_receiver_process, "Runicast Receiver");
-AUTOSTART_PROCESSES(&runicast_receiver_process);
+PROCESS(broadcast_receiver_process, "Broadcast Receiver");
+AUTOSTART_PROCESSES(&broadcast_receiver_process);
 /*---------------------------------------------------------------------------*/
-static struct runicast_conn runicast;
+static struct broadcast_conn broadcast;
 
-/* OPTIONAL: Sender history.
- * Detects duplicate callbacks at receiving nodes.
- * Duplicates appear when ack messages are lost. */
-struct history_entry
-{
-  struct history_entry *next;
-  rimeaddr_t addr;
-  uint8_t seq;
-};
+//~ /* OPTIONAL: Sender history.
+ //~ * Detects duplicate callbacks at receiving nodes.
+ //~ * Duplicates appear when ack messages are lost. */
+//~ struct history_entry
+//~ {
+  //~ struct history_entry *next;
+  //~ rimeaddr_t addr;
+  //~ uint8_t seq;
+//~ };
 
 static void
-recv_runicast(struct runicast_conn *c, const rimeaddr_t *from, uint8_t seqno)
+recv_broadcast(struct boradcast_conn *c, const rimeaddr_t *from)
 {
   //printf("broadcast message received from %d.%d: '%s'\n",
           //from->u8[0], from->u8[1], (char *)packetbuf_dataptr());
@@ -45,25 +45,25 @@ recv_runicast(struct runicast_conn *c, const rimeaddr_t *from, uint8_t seqno)
   
 }
 
-static void sent_runicast(struct runicast_conn *c, const rimeaddr_t *to, uint8_t retransmissions)
-{
-//   printf("runicast message sent to %d.%d, retransmissions %d\n",
-//          to->u8[0], to->u8[1], retransmissions);
-}
+//~ static void sent_runicast(struct runicast_conn *c, const rimeaddr_t *to, uint8_t retransmissions)
+//~ {
+//~ //   printf("runicast message sent to %d.%d, retransmissions %d\n",
+//~ //          to->u8[0], to->u8[1], retransmissions);
+//~ }
 
-static void timedout_runicast(struct runicast_conn *c, const rimeaddr_t *to, uint8_t retransmissions)
-{
-  printf("runicast message timed out when sending to %d.%d, retransmissions %d\n",
-         to->u8[0], to->u8[1], retransmissions);
-}
+//~ static void timedout_runicast(struct runicast_conn *c, const rimeaddr_t *to, uint8_t retransmissions)
+//~ {
+  //~ printf("runicast message timed out when sending to %d.%d, retransmissions %d\n",
+         //~ to->u8[0], to->u8[1], retransmissions);
+//~ }
 
-//static const struct broadcast_callbacks broadcast_call = {broadcast_recv};
-static const struct runicast_callbacks runicast_callbacks = 
-{ 
-  recv_runicast,
-  sent_runicast,
-  timedout_runicast
-};
+static const struct broadcast_callbacks broadcast_call = {broadcast_recv};
+//static const struct runicast_callbacks runicast_callbacks = 
+//~ { 
+  //~ recv_runicast,
+  //~ sent_runicast,
+  //~ timedout_runicast
+//~ };
 
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(runicast_receiver_process, ev, data)
@@ -72,7 +72,7 @@ PROCESS_THREAD(runicast_receiver_process, ev, data)
   PROCESS_EXITHANDLER(runicast_close(&runicast);)
   PROCESS_BEGIN();
 
-  runicast_open(&runicast, COMM_CHANNEL, &runicast_callbacks);
+  broadcast_open(&runicast, SNIFFER_CHANNEL, &broadcast_call);
 
   while(1) 
   {

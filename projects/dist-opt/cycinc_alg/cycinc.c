@@ -118,7 +118,7 @@ static void grad_iterate(int64_t* iterate, int64_t* result, int len)
   int i;
   
   int64_t node_loc[3] = {get_col(), get_row(), 0};
-  int64_t reading = light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC) << PREC_SHIFT;
+  int64_t reading = (light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC) << PREC_SHIFT) - MODEL_C;
   
   for(i = 0; i < len; i++)
   {
@@ -171,7 +171,10 @@ static void grad_iterate(int64_t* iterate, int64_t* result, int len)
 /*
  * Communications handlers
  */
-//static struct broadcast_conn broadcast;
+static struct broadcast_conn broadcast;	
+static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from){}
+static const struct broadcast_callbacks broadcast_call = {broadcast_recv};
+
 static struct runicast_conn runicast;
 
 /* OPTIONAL: Sender history.
@@ -186,8 +189,7 @@ struct history_entry
 LIST(history_table);
 MEMB(history_mem, struct history_entry, NUM_HISTORY_ENTRIES);
 
-static void
-recv_runicast(struct runicast_conn *c, const rimeaddr_t *from, uint8_t seqno)
+static void recv_runicast(struct runicast_conn *c, const rimeaddr_t *from, uint8_t seqno)
 {
    //printf("runicast message received from %d.%d, seqno %d\n",
           //from->u8[0], from->u8[1], seqno);
@@ -279,7 +281,7 @@ PROCESS_THREAD(main_process, ev, data)
   etimer_set(&et, CLOCK_SECOND*2);
   PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
   
-  //broadcast_open(&broadcast, COMM_CHANNEL, &broadcast_call);
+  broadcast_open(&broadcast, SNIFFER_CHANNEL, &broadcast_call);
   runicast_open(&runicast, COMM_CHANNEL, &runicast_callbacks);
 
   
@@ -296,26 +298,26 @@ PROCESS_THREAD(main_process, ev, data)
     etimer_set(&et, CLOCK_SECOND/50);
     PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
     model_c += light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC);
-    printf("model_c = %"PRIi64"\n", model_c);
+    //printf("model_c = %"PRIi64"\n", model_c);
   }
   
   model_c = (model_c / 50) << PREC_SHIFT;
   
   // Sniffer is expecting an opt_message_t
-  out.key = NODE_ID;
-  out.iter = 0;
-  out.data[0] = model_c;
-  out.data[1] = 0;
-  out.data[2] = 0;
+  //~ out.key = NODE_ID;
+  //~ out.iter = 0;
+  //~ out.data[0] = model_c;
+  //~ out.data[1] = 0;
+  //~ out.data[2] = 0;
+  //~ 
+  //~ while( runicast_is_transmitting(&runicast) )
+  //~ {
+    //~ etimer_set(&et, CLOCK_SECOND/32);
+    //~ PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+  //~ }
   
-  while( runicast_is_transmitting(&runicast) )
-  {
-    etimer_set(&et, CLOCK_SECOND/32);
-    PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
-  }
-  
-  packetbuf_copyfrom( &out,sizeof(out) );
-  runicast_send(&runicast, &sniffer, MAX_RETRANSMISSIONS);
+  //packetbuf_copyfrom( &out,sizeof(out) );
+  //broadcast_send(&broadcast);
 #endif
   
   if(rimeaddr_node_addr.u8[0] == START_NODE_0 &&
@@ -341,13 +343,13 @@ PROCESS_THREAD(main_process, ev, data)
     }
     
     packetbuf_copyfrom( &out,sizeof(out) );
-    runicast_send(&runicast, &sniffer, MAX_RETRANSMISSIONS);
+    broadcast_send(&broadcast);
     
-    while( runicast_is_transmitting(&runicast) )
-    {
-      etimer_set(&et, CLOCK_SECOND/32);
-      PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
-    }
+    //~ while( runicast_is_transmitting(&runicast) )
+    //~ {
+      //~ etimer_set(&et, CLOCK_SECOND/32);
+      //~ PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+    //~ }
    
     packetbuf_copyfrom( &out,sizeof(out) );
     runicast_send(&runicast, &neighbor, MAX_RETRANSMISSIONS);
@@ -439,15 +441,16 @@ PROCESS_THREAD(rx_process, ev, data)
     }
     
     packetbuf_copyfrom( &out,sizeof(out) );
-    runicast_send(&runicast, &sniffer, MAX_RETRANSMISSIONS);
+    broadcast_send(&broadcast);
     
-    while( runicast_is_transmitting(&runicast) )
-    {
-      static struct etimer et;
-      
-      etimer_set(&et, CLOCK_SECOND/32);
-      PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
-    }
+    //~ while( runicast_is_transmitting(&runicast) )
+    //~ {
+      //~ static struct etimer et;
+      //~ 
+      //~ etimer_set(&et, CLOCK_SECOND/32);
+      //~ PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+    //~ }
+    //~ 
     
     packetbuf_copyfrom( &out,sizeof(out) );
     runicast_send(&runicast, &neighbor, MAX_RETRANSMISSIONS);
@@ -557,7 +560,7 @@ int64_t g_model(int64_t* iterate)
  */
 int64_t f_model(int64_t* iterate)
 {
-  return (MODEL_A << PREC_SHIFT)/g_model(iterate) + MODEL_C;
+  return (MODEL_A << PREC_SHIFT)/g_model(iterate);
 }
 
 /*
