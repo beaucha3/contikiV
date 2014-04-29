@@ -26,8 +26,8 @@
 #define EPSILON 1       // Epsilon for stopping condition
 
 #define CALIB_C 1     // Set to non-zero to calibrate on reset
-#define MODEL_A (56000ll << PREC_SHIFT)
-#define MODEL_B (3ll << PREC_SHIFT)
+#define MODEL_A (48000ll << PREC_SHIFT)
+#define MODEL_B (48ll << PREC_SHIFT)
 #define MODEL_C model_c
 #define SPACING 30ll      // Centimeters of spacing
 
