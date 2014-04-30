@@ -2,9 +2,6 @@
 #include <string.h>
 #include <stdint.h>
 
-#define STEP 2
-#define PREC_SHIFT 9
-
 /* 
  * Using fixed step size for now.
  * Actual step size is STEP/256, this is to keep all computations as 
@@ -16,12 +13,12 @@
 #define EPSILON 1       // Epsilon for stopping condition
 
 #define CALIB_C 1     // Set to non-zero to calibrate on reset
-#define MODEL_A (48000 << PREC_SHIFT)
-#define MODEL_B (48 << PREC_SHIFT)
+#define MODEL_A (48000ll << PREC_SHIFT)
+#define MODEL_B (48ll << PREC_SHIFT)
 #define MODEL_C model_c
 #define SPACING 30      // Centimeters of spacing
 #define DATA_LEN 3
-#define MAX_ITER 500
+#define MAX_ITER 10
 
 /*
  * Arrays to convert Node ID to row/column
@@ -35,7 +32,8 @@
  */
 int64_t id2row[] = { 0, 0, 0, 1, 2, 2, 2, 1, 1 };
 int64_t id2col[] = { 0, 1, 2, 2, 2, 1, 0, 0, 1 };
-int64_t data[] = {4675, 5980, 2342, 3505, 3873, 31892, 46217, 47546, 28291};
+int64_t data[] = {4608, 5632, 2560, 47616, 28160, 3584, 46080, 32256, 4096};
+
 
 //Variables for bounding box conditions
 static int64_t max_col = (90 << PREC_SHIFT); 
@@ -60,13 +58,13 @@ int main()
   
   printf("No.,Node,col,row,height\n");
   
-  for( i=0; i<1000; i++ )
+  for( i=0; i<MAX_ITER; i++ )
   {
     for( j=0; j< 9; j++ )
     {
-      grad_iterate( x, r, DATA_LEN, j );
+	  printf("%i,%i,%lli,%lli,%lli\n", 9*i + j, j, x[0], x[1], x[2]);
+	  grad_iterate( x, r, DATA_LEN, j );
       memcpy(x, r, DATA_LEN*sizeof(x[0]));
-      printf("%i,%i,%i,%i,%i\n", 9*i+j, j, x[0], x[1], x[2]);
     }
   }
   
@@ -90,7 +88,7 @@ void grad_iterate(int64_t* iterate, int64_t* result, int len, int id)
     int64_t f = f_model(iterate, id);
     int64_t g = g_model(iterate, id);
     int64_t gsq = (g*g) >> PREC_SHIFT;
-    
+        
     /*
      * ( MODEL_A * (reading - f) * (iterate[i] - node_loc[i]) ) needs at 
      * most 58 bits, and after the division, is at least 4550.
@@ -99,7 +97,7 @@ void grad_iterate(int64_t* iterate, int64_t* result, int len, int id)
     
 //     result[i] = iterate[i] - ((((STEP * 4 * (MODEL_A * (reading - f_model(iterate)) / ((g_model(iterate) * g_model(iterate)) >> PREC_SHIFT))) >> PREC_SHIFT) * (iterate[i] - node_loc[i])) >> PREC_SHIFT);
   }
-  
+     
   /*
    * Bounding Box conditions to bring the iterate back if it strays too far 
    */
