@@ -34,7 +34,7 @@ broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)
 
 	packetbuf_copyto(&msg);
   
-  printf("%u %u", msg.iter, from->u8[0]);
+  printf("%u %u %u", msg.key, msg.iter, from->u8[0]);
   
   for( i=0; i<DATA_LEN; i++ )
   {

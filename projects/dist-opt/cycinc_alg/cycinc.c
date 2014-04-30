@@ -102,6 +102,16 @@ int64_t norm2(int64_t* a, int64_t* b, int len);
 int64_t g_model(int64_t* iterate);
 int64_t f_model(int64_t* iterate);
 
+
+/*
+ * Communications handlers
+ */
+static struct broadcast_conn broadcast; 
+static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from){}
+static const struct broadcast_callbacks broadcast_call = {broadcast_recv};
+
+static struct runicast_conn runicast;
+
 /*
  * Processes
  */
@@ -116,9 +126,19 @@ AUTOSTART_PROCESSES(&main_process);
 static void grad_iterate(int64_t* iterate, int64_t* result, int len)
 {
   int i;
+  opt_message_t out;
   
   int64_t node_loc[3] = {get_col(), get_row(), 0};
   int64_t reading = (light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC) << PREC_SHIFT) - MODEL_C;
+  
+  out.key = 2;
+  out.iter = cur_cycle + 1;   // cur_cycle hasn't been incremented yet
+  out.data[0] = node_loc[0];
+  out.data[1] = node_loc[1];
+  out.data[2] = reading;
+  
+  packetbuf_copyfrom( &out,sizeof(out) );
+  broadcast_send(&broadcast);
   
   for(i = 0; i < len; i++)
   {
@@ -171,15 +191,6 @@ static void grad_iterate(int64_t* iterate, int64_t* result, int len)
    } 
   
 }
-
-/*
- * Communications handlers
- */
-static struct broadcast_conn broadcast;	
-static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from){}
-static const struct broadcast_callbacks broadcast_call = {broadcast_recv};
-
-static struct runicast_conn runicast;
 
 /* OPTIONAL: Sender history.
  * Detects duplicate callbacks at receiving nodes.
