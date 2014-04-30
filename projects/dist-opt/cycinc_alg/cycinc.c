@@ -129,12 +129,12 @@ static void grad_iterate(int64_t* iterate, int64_t* result, int len)
   opt_message_t out;
   
   int64_t node_loc[3] = {get_col(), get_row(), 0};
-  int64_t reading = (light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC) << PREC_SHIFT) - MODEL_C;
+  int64_t reading = (((int64_t)light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC)) << PREC_SHIFT) - MODEL_C;
   
   out.key = 2;
   out.iter = cur_cycle + 1;   // cur_cycle hasn't been incremented yet
-  out.data[0] = node_loc[0];
-  out.data[1] = node_loc[1];
+  out.data[0] = model_c;
+  out.data[1] = MODEL_C;
   out.data[2] = reading;
   
   packetbuf_copyfrom( &out,sizeof(out) );
