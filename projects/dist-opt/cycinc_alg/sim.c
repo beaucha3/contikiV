@@ -10,7 +10,7 @@
 #define STEP 2
 #define PREC_SHIFT 9
 #define START_VAL {30 << PREC_SHIFT, 30 << PREC_SHIFT, 10 << PREC_SHIFT}
-#define EPSILON 1       // Epsilon for stopping condition
+#define EPSILON 1      // Epsilon for stopping condition
 
 #define CALIB_C 1     // Set to non-zero to calibrate on reset
 #define MODEL_A (48000ll << PREC_SHIFT)
@@ -18,7 +18,7 @@
 #define MODEL_C model_c
 #define SPACING 30      // Centimeters of spacing
 #define DATA_LEN 3
-#define MAX_ITER 10
+#define MAX_ITER 100
 
 /*
  * Arrays to convert Node ID to row/column
@@ -32,7 +32,7 @@
  */
 int64_t id2row[] = { 0, 0, 0, 1, 2, 2, 2, 1, 1 };
 int64_t id2col[] = { 0, 1, 2, 2, 2, 1, 0, 0, 1 };
-int64_t data[] = {4608, 5632, 2560, 47616, 28160, 3584, 46080, 32256, 4096};
+int64_t data[] = {9, 12, 5, 7, 8, 62, 90, 93, 55};
 
 
 //Variables for bounding box conditions
@@ -81,7 +81,7 @@ void grad_iterate(int64_t* iterate, int64_t* result, int len, int id)
   int i;
   
   int64_t node_loc[3] = {get_col(id), get_row(id), 0};
-  int64_t reading = data[id];
+  int64_t reading = data[id] << PREC_SHIFT;
   
   for(i = 0; i < len; i++)
   {
@@ -94,6 +94,9 @@ void grad_iterate(int64_t* iterate, int64_t* result, int len, int id)
      * most 58 bits, and after the division, is at least 4550.
      */
     result[i] = iterate[i] - ( (4 * STEP * ( ((MODEL_A * (reading - f) * (iterate[i] - node_loc[i])) / gsq) >> PREC_SHIFT)) >> PREC_SHIFT);
+    
+    //if(i == 0)
+		//printf("%lli\n", ( ((MODEL_A * (reading - f) * (iterate[i] - node_loc[i])) / gsq) >> PREC_SHIFT));
     
 //     result[i] = iterate[i] - ((((STEP * 4 * (MODEL_A * (reading - f_model(iterate)) / ((g_model(iterate) * g_model(iterate)) >> PREC_SHIFT))) >> PREC_SHIFT) * (iterate[i] - node_loc[i])) >> PREC_SHIFT);
   }
