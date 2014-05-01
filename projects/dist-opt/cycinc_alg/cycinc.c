@@ -55,10 +55,8 @@
  *     /        |
  * 10 -> 11 -> 12
  */
-//#define ID2ROW { 0, 0, 0, 1, 2, 2, 2, 1, 1 }
-//#define ID2COL { 0, 1, 2, 2, 2, 1, 0, 0, 1 }
-#define ID2ROW { 0, 0, 2, 2 }
-#define ID2COL { 0, 2, 2, 0 }
+#define ID2ROW { 0, 0, 0, 1, 2, 2, 2, 1, 1 }
+#define ID2COL { 0, 1, 2, 2, 2, 1, 0, 0, 1 }
 
 #include "contiki.h"
 #include <stdio.h>
@@ -131,14 +129,14 @@ static void grad_iterate(int64_t* iterate, int64_t* result, int len, int64_t rea
   
   int64_t node_loc[3] = {get_col(), get_row(), 0};
   
-//   out.key = 2;
-//   out.iter = cur_cycle + 1;   // cur_cycle hasn't been incremented yet
-//   out.data[0] = model_c;
-//   out.data[1] = MODEL_C;
-//   out.data[2] = reading;
-//   
-//   packetbuf_copyfrom( &out,sizeof(out) );
-//   broadcast_send(&broadcast);
+  //out.key = 2;
+  //out.iter = cur_cycle + 1;   // cur_cycle hasn't been incremented yet
+  //out.data[0] = model_c;
+  //out.data[1] = MODEL_C;
+  //out.data[2] = reading;
+  
+  //packetbuf_copyfrom( &out,sizeof(out) );
+  //broadcast_send(&broadcast);
   
   for(i = 0; i < len; i++)
   {
@@ -403,9 +401,19 @@ PROCESS_THREAD(main_process, ev, data)
 PROCESS_THREAD(rx_process, ev, data)
 {
   PROCESS_BEGIN();
+  
+  
+  static struct etimer et;
+  
   /*
    * Process the packet 
    */
+  leds_on( LEDS_GREEN );
+    
+  etimer_set(&et, CLOCK_SECOND / 8 );
+  PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+   
+  leds_off( LEDS_GREEN );
   
   static uint8_t stop = 0;
   
@@ -445,12 +453,12 @@ PROCESS_THREAD(rx_process, ev, data)
       stop = 0;
     }
     
-    if(stop == 10 || msg.key == (MKEY + 1) || out.iter >= MAX_ITER)
+    if(stop == 3 || msg.key == (MKEY + 1) || out.iter >= MAX_ITER)
     {
       leds_on( LEDS_BLUE );
       out.key = MKEY + 1;
       
-      stop = 10;
+      stop = 3;
     }
     else if(msg.key == MKEY)
     {
