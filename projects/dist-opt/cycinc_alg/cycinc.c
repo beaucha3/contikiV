@@ -23,7 +23,7 @@
 #define STEP 2ll
 #define PREC_SHIFT 9
 #define START_VAL {30ll << PREC_SHIFT, 30ll << PREC_SHIFT, 10ll << PREC_SHIFT}
-#define EPSILON 1       // Epsilon for stopping condition
+#define EPSILON 4       // Epsilon for stopping condition
 
 #define CALIB_C 1     // Set to non-zero to calibrate on reset
 #define MODEL_A (48000ll << PREC_SHIFT)
@@ -131,14 +131,14 @@ static void grad_iterate(int64_t* iterate, int64_t* result, int len)
   int64_t node_loc[3] = {get_col(), get_row(), 0};
   int64_t reading = (((int64_t)light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC)) << PREC_SHIFT) - MODEL_C;
   
-  out.key = 2;
-  out.iter = cur_cycle + 1;   // cur_cycle hasn't been incremented yet
-  out.data[0] = model_c;
-  out.data[1] = MODEL_C;
-  out.data[2] = reading;
+  //out.key = 2;
+  //out.iter = cur_cycle + 1;   // cur_cycle hasn't been incremented yet
+  //out.data[0] = model_c;
+  //out.data[1] = MODEL_C;
+  //out.data[2] = reading;
   
-  packetbuf_copyfrom( &out,sizeof(out) );
-  broadcast_send(&broadcast);
+  //packetbuf_copyfrom( &out,sizeof(out) );
+  //broadcast_send(&broadcast);
   
   for(i = 0; i < len; i++)
   {
@@ -405,6 +405,13 @@ PROCESS_THREAD(rx_process, ev, data)
   /*
    * Process the packet 
    */
+   
+   leds_on( LEDS_GREEN );
+    
+   etimer_set(&et, CLOCK_SECOND / 8 );
+   PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+   
+   leds_off( LEDS_GREEN );
   
   static uint8_t stop = 0;
   
@@ -444,12 +451,12 @@ PROCESS_THREAD(rx_process, ev, data)
       stop = 0;
     }
     
-    if(stop == 10 || msg.key == (MKEY + 1) || out.iter >= MAX_ITER)
+    if(stop == 3 || msg.key == (MKEY + 1) || out.iter >= MAX_ITER)
     {
       leds_on( LEDS_BLUE );
       out.key = MKEY + 1;
       
-      stop = 10;
+      stop = 3;
     }
     else if(msg.key == MKEY)
     {
