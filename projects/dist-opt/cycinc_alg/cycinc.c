@@ -20,10 +20,10 @@
  * Actual step size is STEP/256, this is to keep all computations as 
  * integers
  */
-#define STEP 2ll
-#define PREC_SHIFT 9
+#define STEP 16ll
+#define PREC_SHIFT 12
 #define START_VAL {30ll << PREC_SHIFT, 30ll << PREC_SHIFT, 10ll << PREC_SHIFT}
-#define EPSILON 1       // Epsilon for stopping condition
+#define EPSILON 8       // Epsilon for stopping condition
 
 #define CALIB_C 1     // Set to non-zero to calibrate on reset
 #define MODEL_A (48000ll << PREC_SHIFT)
@@ -31,7 +31,7 @@
 #define MODEL_C model_c
 #define SPACING 30ll      // Centimeters of spacing
 
-#define NUM_NODES 9
+#define NUM_NODES 4
 #define START_ID  10    // ID of first node in chain
 #define START_NODE_0 10  // Address of node to start optimization algorithm
 #define START_NODE_1 0
@@ -39,6 +39,7 @@
 #define SNIFFER_NODE_1 0
 #define NODE_ID (rimeaddr_node_addr.u8[0])
 #define MAX_ITER 500
+#define RWIN 16          // Number of readings to average light sensor reading over
 
 #define DEBUG 0
 #define MAX_RETRANSMISSIONS 4
@@ -54,9 +55,10 @@
  *     /        |
  * 10 -> 11 -> 12
  */
-#define ID2ROW { 0, 0, 0, 1, 2, 2, 2, 1, 1 }
-#define ID2COL { 0, 1, 2, 2, 2, 1, 0, 0, 1 }
-
+//#define ID2ROW { 0, 0, 0, 1, 2, 2, 2, 1, 1 }
+//#define ID2COL { 0, 1, 2, 2, 2, 1, 0, 0, 1 }
+#define ID2ROW { 0, 0, 2, 2 }
+#define ID2COL { 0, 2, 2, 0 }
 
 #include "contiki.h"
 #include <stdio.h>
@@ -102,7 +104,6 @@ int64_t norm2(int64_t* a, int64_t* b, int len);
 int64_t g_model(int64_t* iterate);
 int64_t f_model(int64_t* iterate);
 
-
 /*
  * Communications handlers
  */
@@ -123,22 +124,21 @@ AUTOSTART_PROCESSES(&main_process);
  * Sub-function
  * Computes the next iteration of the algorithm
  */
-static void grad_iterate(int64_t* iterate, int64_t* result, int len)
+static void grad_iterate(int64_t* iterate, int64_t* result, int len, int64_t reading)
 {
   int i;
-  opt_message_t out;
+//   opt_message_t out;
   
   int64_t node_loc[3] = {get_col(), get_row(), 0};
-  int64_t reading = (((int64_t)light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC)) << PREC_SHIFT) - MODEL_C;
   
-  out.key = 2;
-  out.iter = cur_cycle + 1;   // cur_cycle hasn't been incremented yet
-  out.data[0] = model_c;
-  out.data[1] = MODEL_C;
-  out.data[2] = reading;
-  
-  packetbuf_copyfrom( &out,sizeof(out) );
-  broadcast_send(&broadcast);
+//   out.key = 2;
+//   out.iter = cur_cycle + 1;   // cur_cycle hasn't been incremented yet
+//   out.data[0] = model_c;
+//   out.data[1] = MODEL_C;
+//   out.data[2] = reading;
+//   
+//   packetbuf_copyfrom( &out,sizeof(out) );
+//   broadcast_send(&broadcast);
   
   for(i = 0; i < len; i++)
   {
@@ -191,6 +191,7 @@ static void grad_iterate(int64_t* iterate, int64_t* result, int len)
    } 
   
 }
+
 
 /* OPTIONAL: Sender history.
  * Detects duplicate callbacks at receiving nodes.
@@ -455,7 +456,22 @@ PROCESS_THREAD(rx_process, ev, data)
     {
       leds_off( LEDS_BLUE );
       out.key = MKEY;
-      grad_iterate( msg.data, out.data, DATA_LEN );
+      
+      static int i;
+      static int64_t reading = 0;
+      static struct etimer et;
+      
+      for( i=0; i<RWIN; i++ )
+      {
+        reading += ((light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC)) << PREC_SHIFT) - MODEL_C;
+        
+        etimer_set(&et, CLOCK_SECOND/RWIN);
+        PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+      }
+      
+      reading /= RWIN;
+      
+      grad_iterate( msg.data, out.data, DATA_LEN, reading );
     }
     
     out.iter = msg.iter + 1;
