@@ -39,7 +39,7 @@
 #define SNIFFER_NODE_0 25
 #define SNIFFER_NODE_1 0
 #define NODE_ID (rimeaddr_node_addr.u8[0])
-#define MAX_ITER 500
+#define MAX_ITER 1000
 #define RWIN 16ll          // Number of readings to average light sensor reading over
 
 #define DEBUG 0
@@ -455,17 +455,19 @@ PROCESS_THREAD(rx_process, ev, data)
       leds_off( LEDS_BLUE );
       out.key = MKEY;
       
-      reading = 0;
+//       reading = 0;
+//       
+//       for( i=0; i<RWIN; i++ )
+//       {
+//         reading += ((light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC)) << PREC_SHIFT) - MODEL_C;
+//         
+//         etimer_set(&et, (CLOCK_SECOND/RWIN) >> 3);
+//         PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+//       }
+//       
+//       reading = reading/RWIN;
       
-      for( i=0; i<RWIN; i++ )
-      {
-        reading += ((light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC)) << PREC_SHIFT) - MODEL_C;
-        
-        etimer_set(&et, (CLOCK_SECOND/RWIN) >> 3);
-        PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
-      }
-      
-      reading = reading/RWIN;
+      reading = ((light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC)) << PREC_SHIFT) - MODEL_C;
       
       grad_iterate( msg.data, out.data, DATA_LEN, reading );
     }
