@@ -467,7 +467,7 @@ PROCESS_THREAD(rx_process, ev, data)
       {
         reading += ((light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC)) << PREC_SHIFT) - MODEL_C;
         
-        etimer_set(&et, CLOCK_SECOND/RWIN);
+        etimer_set(&et, (CLOCK_SECOND/RWIN) >> 3);
         PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
       }
       
