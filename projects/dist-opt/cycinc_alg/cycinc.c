@@ -23,7 +23,7 @@
 #define STEP 16ll
 #define PREC_SHIFT 12
 #define START_VAL {30ll << PREC_SHIFT, 30ll << PREC_SHIFT, 10ll << PREC_SHIFT}
-#define EPSILON 16      // Epsilon for stopping condition
+#define EPSILON 16ll      // Epsilon for stopping condition
 #define CAUCHY_NUM 5    // Number of elements for Cauchy test
 
 #define CALIB_C 1     // Set to non-zero to calibrate on reset
@@ -32,7 +32,7 @@
 #define MODEL_C model_c
 #define SPACING 30ll      // Centimeters of spacing
 
-#define NUM_NODES 4
+#define NUM_NODES 9
 #define START_ID  10    // ID of first node in chain
 #define START_NODE_0 10  // Address of node to start optimization algorithm
 #define START_NODE_1 0
@@ -40,7 +40,7 @@
 #define SNIFFER_NODE_1 0
 #define NODE_ID (rimeaddr_node_addr.u8[0])
 #define MAX_ITER 500
-#define RWIN 16          // Number of readings to average light sensor reading over
+#define RWIN 16ll          // Number of readings to average light sensor reading over
 
 #define DEBUG 0
 #define MAX_RETRANSMISSIONS 4
@@ -445,9 +445,7 @@ PROCESS_THREAD(rx_process, ev, data)
     /*
      * Stopping condition
      */
-    stop |= cauchy_conv(msg.data);
-    
-    if(stop || msg.key == (MKEY + 1) || out.iter >= MAX_ITER)
+    if(cauchy_conv(msg.data) || msg.key == (MKEY + 1) || out.iter >= MAX_ITER)
     {
       leds_on( LEDS_BLUE );
       out.key = MKEY + 1;
@@ -471,7 +469,7 @@ PROCESS_THREAD(rx_process, ev, data)
         PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
       }
       
-      reading /= RWIN;
+      reading = reading/RWIN;
       
       grad_iterate( msg.data, out.data, DATA_LEN, reading );
     }
