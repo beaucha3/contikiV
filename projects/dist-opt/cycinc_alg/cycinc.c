@@ -23,7 +23,8 @@
 #define STEP 16ll
 #define PREC_SHIFT 12
 #define START_VAL {30ll << PREC_SHIFT, 30ll << PREC_SHIFT, 10ll << PREC_SHIFT}
-#define EPSILON 8       // Epsilon for stopping condition
+#define EPSILON 16      // Epsilon for stopping condition
+#define CAUCHY_NUM 5    // Number of elements for Cauchy test
 
 #define CALIB_C 1     // Set to non-zero to calibrate on reset
 #define MODEL_A (48000ll << PREC_SHIFT)
@@ -99,6 +100,7 @@ int64_t get_col();
 uint8_t abs_diff(uint8_t a, uint8_t b);
 int64_t abs_diff64(int64_t a, int64_t b);
 int64_t norm2(int64_t* a, int64_t* b, int len);
+uint8_t cauchy_conv( int64_t* new );
 int64_t g_model(int64_t* iterate);
 int64_t f_model(int64_t* iterate);
 
@@ -443,22 +445,14 @@ PROCESS_THREAD(rx_process, ev, data)
     /*
      * Stopping condition
      */
-    if (( norm2(cur_data, msg.data, DATA_LEN) <= EPSILON*EPSILON ) &&
-      (cur_cycle > 1) )
-    {
-      stop++;
-    }
-    else
-    {
-      stop = 0;
-    }
+    stop |= cauchy_conv(msg.data);
     
-    if(stop == 3 || msg.key == (MKEY + 1) || out.iter >= MAX_ITER)
+    if(stop || msg.key == (MKEY + 1) || out.iter >= MAX_ITER)
     {
       leds_on( LEDS_BLUE );
       out.key = MKEY + 1;
       
-      stop = 3;
+      stop = 1;
     }
     else if(msg.key == MKEY)
     {
@@ -631,6 +625,53 @@ int64_t norm2(int64_t* a, int64_t* b, int len)
     {
       retval += (a[i] - b[i])*(a[i] - b[i]);
     }
+  }
+  
+  return retval;
+}
+
+/*
+ * Returns non-zero if the Cauchy condition is met for the 
+ * last CAUCHY_NUM elements.
+ * 
+ * 'new' is the newest element in the sequency, and 'eps' is the
+ * threshold for the stopping condition.
+ * 
+ * Keeps an array of the last CAUCHY_NUM elements.  If all the
+ * elements are within 'eps' of eachother, then the Cauchy 
+ * condition is met.
+ */
+uint8_t cauchy_conv( int64_t* new )
+{
+  static int64_t seq[CAUCHY_NUM][DATA_LEN]; // Sequence
+  static unsigned int count = 0;            // Number of elements
+  int i, j;
+  uint8_t retval = 0;
+  
+  if( new )
+  {
+    memcpy( seq[count%CAUCHY_NUM], new, DATA_LEN*sizeof(new[0]) );
+    count++;
+    
+    if( count >= CAUCHY_NUM )
+    {
+      retval = 1;
+      
+      for( i=0; i<CAUCHY_NUM && retval; i++ )
+      {
+        for( j=CAUCHY_NUM-1; j>=i && retval; j-- )
+        {
+          if( norm2( seq[i], seq[j], DATA_LEN ) > (EPSILON*EPSILON) )
+          {
+            retval=0;
+          }
+        }
+      }
+    }
+  }
+  else
+  {
+    count = 0;
   }
   
   return retval;
