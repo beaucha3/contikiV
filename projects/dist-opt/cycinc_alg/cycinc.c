@@ -455,6 +455,8 @@ PROCESS_THREAD(rx_process, ev, data)
       leds_off( LEDS_BLUE );
       out.key = MKEY;
       
+      reading = 0;
+      
       for( i=0; i<RWIN; i++ )
       {
         reading += ((light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC)) << PREC_SHIFT) - MODEL_C;
