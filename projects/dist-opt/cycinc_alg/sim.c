@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
+#include <stdlib.h>
+#include <time.h>
 
 /* 
  * Using fixed step size for now.
@@ -10,15 +12,16 @@
 #define STEP 2
 #define PREC_SHIFT 9
 #define START_VAL {30 << PREC_SHIFT, 30 << PREC_SHIFT, 10 << PREC_SHIFT}
-#define EPSILON 1      // Epsilon for stopping condition
+#define EPSILON 16      // Epsilon for stopping condition
+#define CAUCHY_NUM 10
 
 #define CALIB_C 1     // Set to non-zero to calibrate on reset
-#define MODEL_A (48000ll << PREC_SHIFT)
-#define MODEL_B (48ll << PREC_SHIFT)
+#define MODEL_A (48000l << PREC_SHIFT)
+#define MODEL_B (48l << PREC_SHIFT)
 #define MODEL_C model_c
 #define SPACING 30      // Centimeters of spacing
 #define DATA_LEN 3
-#define MAX_ITER 100
+#define MAX_ITER 1000
 
 /*
  * Arrays to convert Node ID to row/column
@@ -45,16 +48,21 @@ static int64_t min_height = (3 << PREC_SHIFT);
 
 int64_t get_row( int id );
 int64_t get_col( int id );
-void grad_iterate(int64_t* iterate, int64_t* result, int len, int id);
+int64_t grad_iterate(int64_t* iterate, int64_t* result, int len, int id);
 int64_t norm2(int64_t* a, int64_t* b, int len);
+int64_t abs_diff64(int64_t a, int64_t b);
+uint8_t cauchy_conv( int64_t* new );
 int64_t g_model(int64_t* iterate, int id);
 int64_t f_model(int64_t* iterate, int id);
 
 int main()
 {
   int i, j;
+  int64_t d = 0;
   int64_t x[DATA_LEN] = START_VAL;
   int64_t r[DATA_LEN];
+  
+  srand( time( NULL ) );
   
   printf("No.,Node,col,row,height\n");
   
@@ -62,9 +70,15 @@ int main()
   {
     for( j=0; j< 9; j++ )
     {
-	  printf("%i,%i,%lli,%lli,%lli\n", 9*i + j, j, x[0], x[1], x[2]);
-	  grad_iterate( x, r, DATA_LEN, j );
+	    //printf("%i,%i,%lli,%lli,%lli\n", 9*i + j, j, x[0], x[1], x[2]);
+      
+	    d = grad_iterate( x, r, DATA_LEN, j );
       memcpy(x, r, DATA_LEN*sizeof(x[0]));
+    }
+    if( cauchy_conv( x ) )
+    {
+      printf("Converged in %i\n", 9*i + j);
+      break;
     }
   }
   
@@ -76,12 +90,13 @@ int main()
   //~ return ( iterate - ((STEP * ( (1 << (node_id + 1))*iterate - (node_id << (PREC_SHIFT + 1)))) >> PREC_SHIFT) );
 //~ }
 
-void grad_iterate(int64_t* iterate, int64_t* result, int len, int id)
+int64_t grad_iterate(int64_t* iterate, int64_t* result, int len, int id)
 {
   int i;
+  int64_t r = 0; //random() % 5 - 2;
   
   int64_t node_loc[3] = {get_col(id), get_row(id), 0};
-  int64_t reading = data[id] << PREC_SHIFT;
+  int64_t reading = (data[id] + r) << PREC_SHIFT;
   
   for(i = 0; i < len; i++)
   {
@@ -94,11 +109,6 @@ void grad_iterate(int64_t* iterate, int64_t* result, int len, int id)
      * most 58 bits, and after the division, is at least 4550.
      */
     result[i] = iterate[i] - ( (4 * STEP * ( ((MODEL_A * (reading - f) * (iterate[i] - node_loc[i])) / gsq) >> PREC_SHIFT)) >> PREC_SHIFT);
-    
-    //if(i == 0)
-		//printf("%lli\n", ( ((MODEL_A * (reading - f) * (iterate[i] - node_loc[i])) / gsq) >> PREC_SHIFT));
-    
-//     result[i] = iterate[i] - ((((STEP * 4 * (MODEL_A * (reading - f_model(iterate)) / ((g_model(iterate) * g_model(iterate)) >> PREC_SHIFT))) >> PREC_SHIFT) * (iterate[i] - node_loc[i])) >> PREC_SHIFT);
   }
      
   /*
@@ -136,6 +146,7 @@ void grad_iterate(int64_t* iterate, int64_t* result, int len, int id)
 	   result[2] = min_height;
    } 
   
+  return reading;
 }
 
 int64_t get_row( int id )
@@ -189,6 +200,81 @@ int64_t norm2(int64_t* a, int64_t* b, int len)
     for( i=0; i<len; i++ )
     {
       retval += (a[i] - b[i])*(a[i] - b[i]);
+    }
+  }
+  
+  return retval;
+}
+
+/*
+ * Returns the absolute difference of two int64_t's, which will
+ * always be positive.
+ */
+int64_t abs_diff64(int64_t a, int64_t b)
+{
+  int64_t ret;
+  
+  if( a > b )
+    ret = a - b;
+  else
+    ret = b - a;
+  
+  return ret;  
+}
+
+/*
+ * Returns non-zero if the Cauchy condition is met for the 
+ * last CAUCHY_NUM elements.
+ * 
+ * 'new' is the newest element in the sequency, and 'eps' is the
+ * threshold for the stopping condition.
+ * 
+ * Keeps an array of the last CAUCHY_NUM elements.  If all the
+ * elements are within 'eps' of eachother, then the Cauchy 
+ * condition is met.
+ * 
+ * If 'new' is null, count is reset to zero.
+ */
+uint8_t cauchy_conv( int64_t* new )
+{
+  static int64_t seq[CAUCHY_NUM][DATA_LEN]; // Sequence
+  static unsigned int count = 0;            // Number of elements
+  int i, j;
+  uint8_t retval = 0;
+  
+  if( new )
+  {
+    memcpy( seq[count%CAUCHY_NUM], new, DATA_LEN*sizeof(new[0]) );
+    count++;
+    
+    if( count >= CAUCHY_NUM )
+    {
+      retval = 1;
+      
+      for( i=0; i<CAUCHY_NUM && retval; i++ )
+      {
+        for( j=CAUCHY_NUM-1; j>=i && retval; j-- )
+        {
+          if( norm2( seq[i], seq[j], DATA_LEN ) > (EPSILON*EPSILON) )
+          {
+            retval=0;
+          }
+        }
+      }
+    }
+  }
+  else
+  {
+    count = 0;
+  }
+  
+  if( retval )
+  {
+    printf("Converged!\n");
+    
+    for( i=0; i<CAUCHY_NUM; i++ )
+    {
+      printf("%d: %lli, %lli, %lli\n", i, seq[i][0], seq[i][1], seq[i][2]);
     }
   }
   
