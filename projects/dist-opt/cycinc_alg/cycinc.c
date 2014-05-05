@@ -404,26 +404,24 @@ PROCESS_THREAD(rx_process, ev, data)
 {
   PROCESS_BEGIN();
   
-  
   static struct etimer et;
+  static uint8_t stop = 0;
+  static opt_message_t msg;
+  static opt_message_t out;
+  static int i;
+  static int64_t reading = 0;
   
   /*
    * Process the packet 
    */
+  packetbuf_copyto(&msg);
+  
   leds_on( LEDS_GREEN );
     
   etimer_set(&et, CLOCK_SECOND / 8 );
   PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
    
   leds_off( LEDS_GREEN );
-  
-  static uint8_t stop = 0;
-  
-  static opt_message_t msg;
-  packetbuf_copyto(&msg);  
-  
-  static opt_message_t out;
-  
   
      //~ printf("%u %u", msg.iter, msg.key);
      //~ 
@@ -457,10 +455,6 @@ PROCESS_THREAD(rx_process, ev, data)
       leds_off( LEDS_BLUE );
       out.key = MKEY;
       
-      static int i;
-      static int64_t reading = 0;
-      static struct etimer et;
-      
       for( i=0; i<RWIN; i++ )
       {
         reading += ((light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC)) << PREC_SHIFT) - MODEL_C;
@@ -478,8 +472,6 @@ PROCESS_THREAD(rx_process, ev, data)
     
     while( runicast_is_transmitting(&runicast) )
     {
-      static struct etimer et;
-      
       etimer_set(&et, CLOCK_SECOND/32);
       PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
     }
@@ -506,8 +498,6 @@ PROCESS_THREAD(rx_process, ev, data)
     // Wait until we are done transmitting
     while( runicast_is_transmitting(&runicast) )
     {
-      static struct etimer et;
-      
       etimer_set(&et, CLOCK_SECOND/32);
       PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
     }
