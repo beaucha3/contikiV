@@ -408,7 +408,7 @@ PROCESS_THREAD(rx_process, ev, data)
   static uint8_t stop = 0;
   static opt_message_t msg;
   static opt_message_t out;
-  static int i;
+//  static int i;
   static int64_t reading = 0;
   
   /*
@@ -443,7 +443,7 @@ PROCESS_THREAD(rx_process, ev, data)
     /*
      * Stopping condition
      */
-    if(cauchy_conv(msg.data) || msg.key == (MKEY + 1) || out.iter >= MAX_ITER)
+    if( msg.key == (MKEY + 1) || out.iter >= MAX_ITER || cauchy_conv(msg.data) )
     {
       leds_on( LEDS_BLUE );
       out.key = MKEY + 1;
@@ -467,7 +467,7 @@ PROCESS_THREAD(rx_process, ev, data)
 //       
 //       reading = reading/RWIN;
       
-      reading = ((light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC)) << PREC_SHIFT) - MODEL_C;
+      reading = (((int64_t)light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC)) << PREC_SHIFT) - MODEL_C;
       
       grad_iterate( msg.data, out.data, DATA_LEN, reading );
     }
