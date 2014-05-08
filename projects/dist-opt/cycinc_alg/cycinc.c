@@ -23,7 +23,7 @@
 #define STEP 16ll
 #define PREC_SHIFT 12
 #define START_VAL {30ll << PREC_SHIFT, 30ll << PREC_SHIFT, 10ll << PREC_SHIFT}
-#define EPSILON 90ll      // Epsilon for stopping condition
+#define EPSILON 2048ll      // Epsilon for stopping condition
 #define CAUCHY_NUM 5    // Number of elements for Cauchy test
 
 #define CALIB_C 1     // Set to non-zero to calibrate on reset
@@ -651,7 +651,7 @@ uint8_t cauchy_conv( int64_t* new )
       
       for( i=0; i<CAUCHY_NUM && retval; i++ )
       {
-        for( j=CAUCHY_NUM-1; j>=i && retval; j-- )
+        for( j=CAUCHY_NUM-1; j>i && retval; j-- )
         {
           if( norm2( seq[i], seq[j], DATA_LEN ) > (EPSILON*EPSILON) )
           {
