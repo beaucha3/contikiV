@@ -23,8 +23,8 @@
 #define STEP 16ll
 #define PREC_SHIFT 12
 #define START_VAL {30ll << PREC_SHIFT, 30ll << PREC_SHIFT, 10ll << PREC_SHIFT}
-#define EPSILON 2048ll      // Epsilon for stopping condition
-#define CAUCHY_NUM 5    // Number of elements for Cauchy test
+#define EPSILON 5000ll      // Epsilon for stopping condition
+#define CAUCHY_NUM 10    // Number of elements for Cauchy test
 
 #define CALIB_C 1     // Set to non-zero to calibrate on reset
 #define MODEL_A (48000ll << PREC_SHIFT)
