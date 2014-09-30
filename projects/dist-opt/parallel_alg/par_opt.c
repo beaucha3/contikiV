@@ -65,6 +65,7 @@
  */
 #define ID2ROW { 0, 0, 0, 1, 2, 2, 2, 1, 1 }
 #define ID2COL { 0, 1, 2, 2, 2, 1, 0, 0, 1 }
+#define ID2NUM_NEIGHBORS { 2, 3, 2, 3, 2, 3, 2, 3, 4}
 
 #include "contiki.h"
 #include <stdio.h>
@@ -73,6 +74,9 @@
 #include "dev/leds.h"
 #include "dev/light-sensor.h"
 #include "dev/button-sensor.h"
+#include "lib/memb.h"
+#include "random.h"
+
 #include "par_opt.h"
 
 /*
@@ -90,20 +94,28 @@ static int64_t max_row = (90ll << PREC_SHIFT);
 static int64_t min_col = -1 * (30ll << PREC_SHIFT);
 static int64_t min_row = -1 * (30ll << PREC_SHIFT);
 static int64_t max_height = (30ll << PREC_SHIFT);
-static int64_t min_height = (3ll << PREC_SHIFT);  
+static int64_t min_height = (3ll << PREC_SHIFT); 
 
-//Variables to store this node's immediate upstream neighbor and sniffer
-static rimeaddr_t neighbor;
+// List of neighbors
+static int64_t id_num_neighbors[] = ID2NUM_NEIGHBORS;
+static rimeaddr_t neighbors[id_num_neighbors[NODE_ID - START_ID]]; 
+
+// Sniffer node address
 static rimeaddr_t sniffer;
 
 /*
  * Local function declarations
  */
+
+// Functions to get location information from id
 int64_t get_row();
 int64_t get_col();
+uint8_t is_neighbor( const rimeaddr_t* a );
+void gen_neighbor_list();
 
-//uint8_t is_from_upstream( const rimeaddr_t* from );
 
+
+// Functions that assist in gradient computation/ convergence criterion check
 uint8_t abs_diff(uint8_t a, uint8_t b);
 int64_t abs_diff64(int64_t a, int64_t b);
 int64_t norm2(int64_t* a, int64_t* b, int len);
@@ -674,4 +686,104 @@ uint8_t cauchy_conv( int64_t* new )
   }
   
   return retval;
+}
+
+/*
+ * Returns non-zero if a is in the neighbor list
+ */
+uint8_t is_neighbor( const rimeaddr_t* a )
+{
+  uint8_t i, retval = 0;
+  
+  if( a )
+  {
+    for( i=0; i<NUM_NBRS; i++ )
+    {
+      retval = retval || rimeaddr_cmp(&(neighbors[i]), a);
+    }
+  }
+  
+  return retval;
+}
+
+/*
+ * Creates list of neighbors, storing it in a global variable
+ * static rimeaddr_t neighbors[NUM_NBRS];
+ * 
+ * If neighbor in any direction does not exist, then its address
+ * is given by this node's address.
+ */
+void gen_neighbor_list()
+{
+  rimeaddr_t a;
+  unsigned int row, col;
+  
+  // Get our row and column
+  rimeaddr2rc( rimeaddr_node_addr, &row, &col );
+  
+  // Define first "neighbor" to be this node
+  rimeaddr_copy( &(neighbors[0]), &rimeaddr_node_addr );
+  
+  // Get rime addresses of neighbor nodes
+  
+  // North neighbor, ensure row != 1
+  if( row == 1 )
+  {
+    // Can't go North, use our address
+    rimeaddr_copy( &(neighbors[1]), &rimeaddr_node_addr );
+  }
+  else
+  {
+    // Get address of node to North, copy to neighbors list
+    rc2rimeaddr( &a, row-1, col );
+    rimeaddr_copy( &(neighbors[1]), &a );
+  }
+    
+  // East neighbor, ensure col != MAX_COLS
+  if( col == MAX_COLS )
+  {
+    // Can't go East, use our address
+    rimeaddr_copy( &(neighbors[2]), &rimeaddr_node_addr );
+  }
+  else
+  {
+    // Get address of node to East, copy to neighbors list
+    rc2rimeaddr( &a, row, col+1 );
+    rimeaddr_copy( &(neighbors[2]), &a );
+  }
+  
+  // South neighbor, ensure row != MAX_ROWS
+  if( row ==  MAX_ROWS )
+  {
+    // Can't go South, use our address
+    rimeaddr_copy( &(neighbors[3]), &rimeaddr_node_addr );
+  }
+  else
+  {
+    // Get address of node to South, copy to neighbors list
+    rc2rimeaddr( &a, row+1, col );
+    rimeaddr_copy( &(neighbors[3]), &a );
+  }
+    
+  // West neighbor, ensure col != 1
+  if( col == 1 )
+  {
+    // Can't go West, use our address
+    rimeaddr_copy( &(neighbors[4]), &rimeaddr_node_addr );
+  }
+  else
+  {
+    // Get address of node to West, copy to neighbors list
+    rc2rimeaddr( &a, row, col-1 );
+    rimeaddr_copy( &(neighbors[4]), &a );
+  }
+  
+#if DEBUG > 1
+  int i;
+  
+  for( i=0; i<5; i++ )
+  {
+    printf("Neighbor %d at %d.%d\n", i, (neighbors[i]).u8[0], (neighbors[i]).u8[1]);
+  }
+#endif
 }
