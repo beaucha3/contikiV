@@ -1,85 +1,49 @@
+/* Code for Master Clock Node that signals the beginning 
+ * of each optimization round every few seconds.
+ * 
+ * Clock Period is configurable with the 
+ */
+
+
 #include "contiki.h"
 #include "net/rime.h"
-
-#define TX 0
-
 #include <stdio.h>
+#include "par_opt.h"
 
-//#include "shell.h"
-#include "cycinc.h"
+#define PERIOD CLOCK_SECOND*2
+
 /*---------------------------------------------------------------------------*/
-PROCESS(broadcast_receiver_process, "Broadcast Receiver");
-AUTOSTART_PROCESSES(&broadcast_receiver_process);
+PROCESS(broadcast_clock_process, "Broadcast Clock");
+AUTOSTART_PROCESSES(&broadcast_clock_process);
 /*---------------------------------------------------------------------------*/
 static struct broadcast_conn broadcast;
 
-//~ /* OPTIONAL: Sender history.
- //~ * Detects duplicate callbacks at receiving nodes.
- //~ * Duplicates appear when ack messages are lost. */
-//~ struct history_entry
-//~ {
-  //~ struct history_entry *next;
-  //~ rimeaddr_t addr;
-  //~ uint8_t seq;
-//~ };
-
 static void
-broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)
-{
-  //printf("broadcast message received from %d.%d: '%s'\n",
-          //from->u8[0], from->u8[1], (char *)packetbuf_dataptr());
-
-  static opt_message_t msg;
-  int i;
-
-	packetbuf_copyto(&msg);
-  
-  printf("%u %u %u", msg.key, msg.iter, from->u8[0]);
-  
-  for( i=0; i<DATA_LEN; i++ )
-  {
-    printf(" %"PRIi64, msg.data[i]);
-  }
-  
-  printf("\n");
-  
-}
-
-//~ static void sent_runicast(struct runicast_conn *c, const rimeaddr_t *to, uint8_t retransmissions)
-//~ {
-//~ //   printf("runicast message sent to %d.%d, retransmissions %d\n",
-//~ //          to->u8[0], to->u8[1], retransmissions);
-//~ }
-
-//~ static void timedout_runicast(struct runicast_conn *c, const rimeaddr_t *to, uint8_t retransmissions)
-//~ {
-  //~ printf("runicast message timed out when sending to %d.%d, retransmissions %d\n",
-         //~ to->u8[0], to->u8[1], retransmissions);
-//~ }
+broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from){}
 
 static const struct broadcast_callbacks broadcast_call = {broadcast_recv};
-//static const struct runicast_callbacks runicast_callbacks = 
-//~ { 
-  //~ recv_runicast,
-  //~ sent_runicast,
-  //~ timedout_runicast
-//~ };
 
 /*---------------------------------------------------------------------------*/
-PROCESS_THREAD(broadcast_receiver_process, ev, data)
+PROCESS_THREAD(broadcast_clock_process, ev, data)
 {
   static struct etimer et;
+  static clock_message_t out;
+  out.key = CKEY;
+
   PROCESS_EXITHANDLER(broadcast_close(&broadcast);)
   PROCESS_BEGIN();
 
-  broadcast_open(&broadcast, SNIFFER_CHANNEL, &broadcast_call);
+  broadcast_open(&broadcast, CLOCK_CHANNEL, &broadcast_call);
 
   while(1) 
   {
-    /* Delay 2-4 seconds */
-    etimer_set(&et, CLOCK_SECOND * 4 );
-
+    // Delay by clock period 
+    etimer_set(&et, PERIOD);
     PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+
+    // Broadcast clock message
+    packetbuf_copyfrom( &out,sizeof(out) );
+    broadcast_send(&broadcast);    
   }
 
 

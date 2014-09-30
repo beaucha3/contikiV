@@ -7,7 +7,7 @@
  * signal the start of each round.
  *
  * Motes will update their local estimate with a local gradient and transmit to all neighbors,
- * They will taverage their local estimates with that of their neighbors. 
+ * They will average their local estimates with that of their neighbors. 
  * 
  * Subfunctions are hard-coded. Function to optimize is global sum of
  * all subfunctions.
@@ -16,14 +16,14 @@
 
 /* 
  * Using fixed step size for now.
- * Actual step size is STEP/256, this is to keep all computations as 
+ * Actual step size is STEP/2^PREC_SHIFT, this is to keep all computations as 
  * integers
  */
 #define STEP 16ll
 #define PREC_SHIFT 12
 #define START_VAL {30ll << PREC_SHIFT, 30ll << PREC_SHIFT, 10ll << PREC_SHIFT}
-#define EPSILON 5000ll      // Epsilon for stopping condition
-#define CAUCHY_NUM 10    // Number of elements for Cauchy test
+#define EPSILON 5000ll      // Epsilon for stopping condition actual epsilon is this value divided by 2^PREC_SHIFT
+#define CAUCHY_NUM 10    // Number of history elements for Cauchy test
 
 #define CALIB_C 1     // Set to non-zero to calibrate on reset
 #define MODEL_A (48000ll << PREC_SHIFT)
@@ -31,16 +31,22 @@
 #define MODEL_C model_c
 #define SPACING 30ll      // Centimeters of spacing
 
-#define NUM_NODES 9
+#define NUM_NODES 9   // Number of nodes in grid topology
+
+// Special Node Addresses and Topology Constants
+
+#define MAX_ROWS 3      // Number of rows in sensor grid
+#define MAX_COLS 3      // Number of columns in sensor grid
 #define START_ID  10    // ID of first node in chain
-#define START_NODE_0 10  // Address of node to start optimization algorithm
-#define START_NODE_1 0
 #define SNIFFER_NODE_0 25
 #define SNIFFER_NODE_1 0
+#define CLOCK_NODE_0 20
+#define CLOCK_NODE_1 0
 #define NODE_ID (rimeaddr_node_addr.u8[0])
-#define MAX_ITER 1000
+#define MAX_ITER 1000      // Max iteration number, algorithm will terminate at this point regardless of epsilon
 #define RWIN 16ll          // Number of readings to average light sensor reading over
 
+// Rime constants
 #define DEBUG 0
 #define MAX_RETRANSMISSIONS 4
 #define NUM_HISTORY_ENTRIES 4
@@ -48,12 +54,14 @@
 /*
  * Arrays to convert Node ID to row/column
  * Lower left node is at (0,0), and arrays are indexed 
- * with NODE_ID
- * 16 <- 15 <- 14
- *  |           |
- * 17 -> 18    13
- *     /        |
- * 10 -> 11 -> 12
+ * with NODE_ID. Full grid topology, not single cycle.
+ * All comm links are bi-directional
+ *
+ * 16 - 15 - 14
+ *  |    |    |
+ * 17 - 18 - 13
+ *  |    |    |
+ * 10 - 11 - 12
  */
 #define ID2ROW { 0, 0, 0, 1, 2, 2, 2, 1, 1 }
 #define ID2COL { 0, 1, 2, 2, 2, 1, 0, 0, 1 }
@@ -65,7 +73,7 @@
 #include "dev/leds.h"
 #include "dev/light-sensor.h"
 #include "dev/button-sensor.h"
-#include "cycinc.h"
+#include "par_opt.h"
 
 /*
  * Global Variables

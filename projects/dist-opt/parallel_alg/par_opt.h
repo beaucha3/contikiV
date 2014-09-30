@@ -1,12 +1,14 @@
-#ifndef _CYCINC_H_
-#define _CYCINC_H_
+#ifndef _PAR_OPT_H_
+#define _PAR_OPT_H_
 
 #include <stdint.h>
 
-#define MKEY 1156   // Chosen by fair die rolls, guaranteed to be random
-#define MAX_NODES 4     // Number of nodes in topology
+#define MKEY 1156   // Iterate message key. Chosen by fair die rolls, guaranteed to be random.
+#define CKEY 2000   // Chosen by grad student, not necessarily random.
+#define MAX_NODES 9     // Number of nodes in topology
 #define COMM_CHANNEL 100
 #define SNIFFER_CHANNEL 200
+#define CLOCK_CHANNEL 300
 #define DATA_LEN 3
 
 typedef struct opt_message_s
@@ -16,6 +18,12 @@ typedef struct opt_message_s
   int64_t data[DATA_LEN];  // Current data step of optimization algorithm
 }
 opt_message_t;
+
+typedef struct clock_message_s
+{
+  uint16_t key;
+}
+clock_message_t
 
 //uint16_t u16byteswap(uint16_t x)
 //{
@@ -27,4 +35,4 @@ opt_message_t;
 	//return ( ((x & 0xFF00FF00) >> 8) | ((x & 0x00FF00FF) << 8) );
 //}
 
-#endif /* _CYCINC_H_ */
+#endif /* _PAR_OPT_H_ */

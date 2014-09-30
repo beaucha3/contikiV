@@ -1,27 +1,14 @@
 #include "contiki.h"
 #include "net/rime.h"
+#include <stdio.h>
+#include "par_opt.h"
 
 #define TX 0
-
-#include <stdio.h>
-
-//#include "shell.h"
-#include "cycinc.h"
 /*---------------------------------------------------------------------------*/
 PROCESS(broadcast_receiver_process, "Broadcast Receiver");
 AUTOSTART_PROCESSES(&broadcast_receiver_process);
 /*---------------------------------------------------------------------------*/
 static struct broadcast_conn broadcast;
-
-//~ /* OPTIONAL: Sender history.
- //~ * Detects duplicate callbacks at receiving nodes.
- //~ * Duplicates appear when ack messages are lost. */
-//~ struct history_entry
-//~ {
-  //~ struct history_entry *next;
-  //~ rimeaddr_t addr;
-  //~ uint8_t seq;
-//~ };
 
 static void
 broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)
@@ -45,25 +32,7 @@ broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)
   
 }
 
-//~ static void sent_runicast(struct runicast_conn *c, const rimeaddr_t *to, uint8_t retransmissions)
-//~ {
-//~ //   printf("runicast message sent to %d.%d, retransmissions %d\n",
-//~ //          to->u8[0], to->u8[1], retransmissions);
-//~ }
-
-//~ static void timedout_runicast(struct runicast_conn *c, const rimeaddr_t *to, uint8_t retransmissions)
-//~ {
-  //~ printf("runicast message timed out when sending to %d.%d, retransmissions %d\n",
-         //~ to->u8[0], to->u8[1], retransmissions);
-//~ }
-
 static const struct broadcast_callbacks broadcast_call = {broadcast_recv};
-//static const struct runicast_callbacks runicast_callbacks = 
-//~ { 
-  //~ recv_runicast,
-  //~ sent_runicast,
-  //~ timedout_runicast
-//~ };
 
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(broadcast_receiver_process, ev, data)

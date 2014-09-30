@@ -17,7 +17,7 @@
 
 /* 
  * Using fixed step size for now.
- * Actual step size is STEP/256, this is to keep all computations as 
+ * Actual step size is STEP/2^PREC_SHIFT, this is to keep all computations as 
  * integers
  */
 #define STEP 16ll
