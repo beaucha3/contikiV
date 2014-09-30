@@ -23,7 +23,7 @@ typedef struct clock_message_s
 {
   uint16_t key;
 }
-clock_message_t
+clock_message_t;
 
 //uint16_t u16byteswap(uint16_t x)
 //{

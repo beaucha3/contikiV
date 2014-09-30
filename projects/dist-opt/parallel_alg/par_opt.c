@@ -25,6 +25,8 @@
 #define EPSILON 5000ll      // Epsilon for stopping condition actual epsilon is this value divided by 2^PREC_SHIFT
 #define CAUCHY_NUM 10    // Number of history elements for Cauchy test
 
+// Model constants. Observation model follows (A/(r^2 + B)) + C
+// g_model is the denominator, f_model is the entire expression
 #define CALIB_C 1     // Set to non-zero to calibrate on reset
 #define MODEL_A (48000ll << PREC_SHIFT)
 #define MODEL_B (48ll << PREC_SHIFT)
@@ -83,9 +85,17 @@
  * Global Variables
  */ 
 
-//Variable storing previous cycle's local estimate for stop condition
-static int64_t cur_data[DATA_LEN] = {0};
+/* Variables storing aggregate local estimates from neighbors,
+ * current local estimate, data after gradient update,
+ * number of received neighbor messages this round,
+ * current iteration number for max iteration stopping,
+ * nominal model_c in case calibration is disabled, and stop condition
+ */
+static int64_t cur_data[DATA_LEN] = START_VAL;
+static int64_t tot_data[DATA_LEN] = {0};
+static int16_t num_neighbor_messages_recv = 0;
 static int16_t cur_cycle = 0;
+static uint8_t stop = 0;
 static int64_t model_c = 88ll << PREC_SHIFT;
 
 //Variables for bounding box conditions
@@ -127,7 +137,12 @@ int64_t f_model(int64_t* iterate);
  * Communications handlers
  */
 static struct broadcast_conn broadcast; 
-static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from){}
+static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)
+{	
+  process_start(&bcast_rx_process, (char*)from);
+}
+
+
 static const struct broadcast_callbacks broadcast_call = {broadcast_recv};
 
 static struct runicast_conn runicast;
@@ -137,6 +152,7 @@ static struct runicast_conn runicast;
  */
 PROCESS(main_process, "main");
 PROCESS(rx_process, "rx_proc");
+PROCESS(bcast_rx_process, "bcast_rx_proc");
 AUTOSTART_PROCESSES(&main_process);
 
 /*
@@ -146,18 +162,9 @@ AUTOSTART_PROCESSES(&main_process);
 static void grad_iterate(int64_t* iterate, int64_t* result, int len, int64_t reading)
 {
   int i;
-//   opt_message_t out;
-  
   int64_t node_loc[3] = {get_col(), get_row(), 0};
   
-  //out.key = 2;
-  //out.iter = cur_cycle + 1;   // cur_cycle hasn't been incremented yet
-  //out.data[0] = model_c;
-  //out.data[1] = MODEL_C;
-  //out.data[2] = reading;
-  
-  //packetbuf_copyfrom( &out,sizeof(out) );
-  //broadcast_send(&broadcast);
+
   
   for(i = 0; i < len; i++)
   {
@@ -266,7 +273,7 @@ static void recv_runicast(struct runicast_conn *c, const rimeaddr_t *from, uint8
     /* Update existing history entry */
     e->seq = seqno;
   }
-  
+
   process_start(&rx_process, (char*)from);
 }
 
@@ -303,7 +310,6 @@ PROCESS_THREAD(main_process, ev, data)
   PROCESS_BEGIN();
   
   static int i;
-  static int64_t s[3] = START_VAL;
   static opt_message_t out;
   static struct etimer et;
   
@@ -424,17 +430,14 @@ PROCESS_THREAD(rx_process, ev, data)
   PROCESS_BEGIN();
   
   static struct etimer et;
-  static uint8_t stop = 0;
   static opt_message_t msg;
-  static opt_message_t out;
-//  static int i;
-  static int64_t reading = 0;
   
   /*
    * Process the packet 
    */
   packetbuf_copyto(&msg);
   
+  // Blink Green LEDs to indicate we got a neighbor message 
   leds_on( LEDS_GREEN );
     
   etimer_set(&et, CLOCK_SECOND / 8 );
@@ -457,74 +460,25 @@ PROCESS_THREAD(rx_process, ev, data)
    * but double-check to be sure.  Valid packets should start with
    * MKEY, and we're only interested in packets from our neighbors.
    */
-  if( !stop )
+  if( !stop && msg.key == MKEY && is_neighbor( (rimeaddr_t*) data ))
   {
-    /*
-     * Stopping condition
-     */
-    if( msg.key == (MKEY + 1) || out.iter >= MAX_ITER || cauchy_conv(msg.data) )
+    leds_off( LEDS_BLUE );
+
+    // Add data to our running total for the round and increment received
+    // message count 
+    num_neighbor_messages_recv = num_neighbor_messages_recv + 1;
+    int i;
+    for(i = 0; i < DATA_LEN; i++)
     {
-      leds_on( LEDS_BLUE );
-      out.key = MKEY + 1;
-      
-      stop = 1;
-    }
-    else if(msg.key == MKEY)
-    {
-      leds_off( LEDS_BLUE );
-      out.key = MKEY;
-      
-//       reading = 0;
-//       
-//       for( i=0; i<RWIN; i++ )
-//       {
-//         reading += ((light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC)) << PREC_SHIFT) - MODEL_C;
-//         
-//         etimer_set(&et, (CLOCK_SECOND/RWIN) >> 3);
-//         PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
-//       }
-//       
-//       reading = reading/RWIN;
-      
-      reading = (((int64_t)light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC)) << PREC_SHIFT) - MODEL_C;
-      
-      grad_iterate( msg.data, out.data, DATA_LEN, reading );
-    }
-    
-    out.iter = msg.iter + 1;
-    
-    while( runicast_is_transmitting(&runicast) )
-    {
-      etimer_set(&et, CLOCK_SECOND/32);
-      PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
-    }
-    
-    packetbuf_copyfrom( &out,sizeof(out) );
-    broadcast_send(&broadcast);
-    
-    //~ while( runicast_is_transmitting(&runicast) )
-    //~ {
-      //~ static struct etimer et;
-      //~ 
-      //~ etimer_set(&et, CLOCK_SECOND/32);
-      //~ PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
-    //~ }
-    //~ 
-    
-    packetbuf_copyfrom( &out,sizeof(out) );
-    runicast_send(&runicast, &neighbor, MAX_RETRANSMISSIONS);
-    
-    // Save data for next time
-    memcpy( cur_data, msg.data, DATA_LEN*sizeof(*cur_data) );
-    cur_cycle++;  
-    
-    // Wait until we are done transmitting
-    while( runicast_is_transmitting(&runicast) )
-    {
-      etimer_set(&et, CLOCK_SECOND/32);
-      PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
-    }
+		tot_data[i] = tot_data[i] + msg.data[i]
+	}  
   }
+  else if((stop || msg.key == MKEY + 1) && is_neighbor( (rimeaddr_t*) data ))
+  {
+	  stop = 1;
+	  leds_on( LEDS_BLUE );
+  }
+  
   //   else
   //   {
   //     printf("Not from neighbor or stopping\n");
@@ -534,17 +488,68 @@ PROCESS_THREAD(rx_process, ev, data)
 }
 
 /*
- * Returns non-zero value if m originated from a neighbor node
- * Message is from a neighbor if addr[0] is NODE_ADDR_0 - 1
- */	
-
-uint8_t is_from_upstream( const rimeaddr_t* from )
+ * Started when a broadcast packet is received.
+ * 
+ * 'data' is the 'from' pointer
+ */
+PROCESS_THREAD(bcast_rx_process, ev, data)
 {
-  // Account for previous node.
-  // If we are the first node, MAX_NODES is our upstream neighbor
-  return(  ((NODE_ID) - from->u8[0]) == 1 
-        || ( (NODE_ID==START_ID) 
-           && (from->u8[0]==START_ID + NUM_NODES-1) ) );
+  PROCESS_BEGIN();
+  
+  static clock_message_t msg;
+  packetbuf_copyto(&msg);
+  
+  // Only start the round if the message is a clock type 
+  if(msg.key == CKEY && !stop)
+  {		  
+	  static struct etimer et;
+	  static uint8_t stop = 0;
+	  static opt_message_t out;
+	  static int64_t reading = 0;
+	 
+	  // Average local estimate with that of neighbors from the previous round, and reset aggregate data to zero
+	  int i;
+	  
+	  for(i = 0; i < DATA_LEN; i++)
+	  {
+	    tot_data[i] = tot_data[i] + cur_data[i];
+	  }
+	  
+	  for(i = 0; i < DATA_LEN; i++)
+	  {
+	    cur_data[i] = tot_data[i]/(num_neighbor_messages_recv + 1);
+	    tot_data[i] = 0;
+	  }
+		  
+	  // Reset number of received neighbor messages for the round and increment round counter
+	  num_neighbor_messages_recv = 0;
+	  cur_cycle = cur_cycle + 1;
+	  
+	  // Update local estimate with local gradient information
+	  reading = (((int64_t)light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC)) << PREC_SHIFT) - MODEL_C;
+	  grad_iterate( cur_data, out.data, DATA_LEN, reading );
+	  
+	  // Check stop condition and set stop variable and change output message key if necessary
+	  
+	  
+	  // Transmit local estimate to each neighbor in the neighbor list with random wait time inbetween
+	  for(i = 0; i < id_num_neighbors[NODE_ID - START_ID]; i++)
+	  {
+		  
+	  }
+	  
+	  // Transmit local estimate to the sniffer node
+	  
+	  
+	  }
+	  
+  else if(msg.key == CKEY && stop)
+  {
+	leds_on( LEDS_BLUE );
+  }
+		  
+ 
+  PROCESS_END();
 }
 
 /*

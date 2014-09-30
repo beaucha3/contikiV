@@ -8,6 +8,7 @@
 #include "contiki.h"
 #include "net/rime.h"
 #include <stdio.h>
+#include "dev/leds.h"
 #include "par_opt.h"
 
 #define PERIOD CLOCK_SECOND*2
