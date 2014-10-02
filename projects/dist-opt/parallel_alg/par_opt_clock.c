@@ -35,7 +35,13 @@ PROCESS_THREAD(broadcast_clock_process, ev, data)
   PROCESS_BEGIN();
 
   broadcast_open(&broadcast, CLOCK_CHANNEL, &broadcast_call);
-
+  
+  SENSORS_ACTIVATE(button_sensor);
+    
+  // Don't start clock signal until user button is pressed
+  PROCESS_WAIT_EVENT_UNTIL(ev == sensors_event 
+                        && data == &button_sensor);
+  
   while(1) 
   {
     // Delay by clock period 
@@ -44,9 +50,16 @@ PROCESS_THREAD(broadcast_clock_process, ev, data)
 
     // Broadcast clock message
     packetbuf_copyfrom( &out,sizeof(out) );
-    broadcast_send(&broadcast);    
+    broadcast_send(&broadcast);
+    
+    // Blink Green LEDs to indicate we just sent out a clock message 
+    leds_on( LEDS_GREEN );
+    
+    etimer_set(&et, CLOCK_SECOND / 8 );
+    PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+   
+    leds_off( LEDS_GREEN );  
   }
-
 
   PROCESS_END();
 }

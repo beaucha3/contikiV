@@ -310,16 +310,8 @@ PROCESS_THREAD(main_process, ev, data)
   PROCESS_BEGIN();
   
   static int i;
-  static opt_message_t out;
   static struct etimer et;
-  
-  if(NODE_ID  == (START_ID + NUM_NODES - 1))
-    neighbor.u8[0] = START_ID;
-  else 
-    neighbor.u8[0] = NODE_ID + 1;
-  
-  neighbor.u8[1] = 0;
-  
+      
   sniffer.u8[0] = SNIFFER_NODE_0;
   sniffer.u8[1] = SNIFFER_NODE_1;
     
@@ -349,58 +341,7 @@ PROCESS_THREAD(main_process, ev, data)
   }
   
   model_c = (model_c / 50) << PREC_SHIFT;
-  
-  // Sniffer is expecting an opt_message_t
-  //~ out.key = NODE_ID;
-  //~ out.iter = 0;
-  //~ out.data[0] = model_c;
-  //~ out.data[1] = 0;
-  //~ out.data[2] = 0;
-  //~ 
-  //~ while( runicast_is_transmitting(&runicast) )
-  //~ {
-    //~ etimer_set(&et, CLOCK_SECOND/32);
-    //~ PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
-  //~ }
-  
-  //packetbuf_copyfrom( &out,sizeof(out) );
-  //broadcast_send(&broadcast);
 #endif
-  
-  if(rimeaddr_node_addr.u8[0] == START_NODE_0 &&
-     rimeaddr_node_addr.u8[1] == START_NODE_1) 
-  {
-    SENSORS_ACTIVATE(button_sensor);
-    
-    // Don't start data collection until user button is pressed
-    PROCESS_WAIT_EVENT_UNTIL(ev == sensors_event 
-                          && data == &button_sensor);
-    
-    etimer_set(&et, CLOCK_SECOND*2);
-    PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
-    
-    out.key = MKEY;
-    out.iter = 0;
-    memcpy( out.data, s, DATA_LEN*sizeof(s[0]) );
-    
-    while( runicast_is_transmitting(&runicast) )
-    {
-      etimer_set(&et, CLOCK_SECOND/32);
-      PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
-    }
-    
-    packetbuf_copyfrom( &out,sizeof(out) );
-    broadcast_send(&broadcast);
-    
-    //~ while( runicast_is_transmitting(&runicast) )
-    //~ {
-      //~ etimer_set(&et, CLOCK_SECOND/32);
-      //~ PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
-    //~ }
-   
-    packetbuf_copyfrom( &out,sizeof(out) );
-    runicast_send(&runicast, &neighbor, MAX_RETRANSMISSIONS);
-  }
   
   while(1)
   {
@@ -468,7 +409,7 @@ PROCESS_THREAD(rx_process, ev, data)
     // message count 
     num_neighbor_messages_recv = num_neighbor_messages_recv + 1;
     int i;
-    for(i = 0; i < DATA_LEN; i++)
+    for(i=0; i<DATA_LEN; i++)
     {
 		tot_data[i] = tot_data[i] + msg.data[i]
 	}  
@@ -505,12 +446,12 @@ PROCESS_THREAD(bcast_rx_process, ev, data)
 	  // Average local estimate with that of neighbors from the previous round, and reset aggregate data to zero
 	  int i;
 	  
-	  for(i = 0; i < DATA_LEN; i++)
+	  for(i=0; i<DATA_LEN; i++)
 	  {
 	    tot_data[i] = tot_data[i] + cur_data[i];
 	  }
 	  
-	  for(i = 0; i < DATA_LEN; i++)
+	  for(i=0; i<DATA_LEN; i++)
 	  {
 	    cur_data[i] = tot_data[i]/(num_neighbor_messages_recv + 1);
 	    tot_data[i] = 0;
@@ -533,7 +474,7 @@ PROCESS_THREAD(bcast_rx_process, ev, data)
 	  }
 	  
 	  // Transmit local estimate to each neighbor in the neighbor list with random wait time inbetween
-	  for(i = 0; i < id_num_neighbors[NODE_ID - START_ID]; i++)
+	  for(i=0; i<id_num_neighbors[NODE_ID - START_ID]; i++)
 	  {
 		// Wait random multiple of 1/32 seconds, uniformly distributed on 0-1 seconds to reduce collisions
 		// and reliably send ( with acks and re-tx's ) to neighbor
@@ -563,8 +504,7 @@ PROCESS_THREAD(bcast_rx_process, ev, data)
   else if(msg.key == CKEY && stop)
   {
 	leds_on( LEDS_BLUE );
-  }
-		  
+  }		  
  
   PROCESS_END();
 }
@@ -719,7 +659,7 @@ uint8_t is_neighbor( const rimeaddr_t* a )
   
   if( a )
   {
-    for( i=0; i<NUM_NBRS; i++ )
+    for( i=0; i<id_num_neighbors[NODE_ID - START_ID]; i++ )
     {
       retval = retval || rimeaddr_cmp(&(neighbors[i]), a);
     }
