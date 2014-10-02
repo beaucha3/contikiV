@@ -11,7 +11,7 @@
 #include "dev/leds.h"
 #include "par_opt.h"
 
-#define PERIOD CLOCK_SECOND*2
+#define PERIOD CLOCK_SECOND*10
 
 /*---------------------------------------------------------------------------*/
 PROCESS(broadcast_clock_process, "Broadcast Clock");

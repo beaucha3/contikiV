@@ -479,11 +479,6 @@ PROCESS_THREAD(rx_process, ev, data)
 	  leds_on( LEDS_BLUE );
   }
   
-  //   else
-  //   {
-  //     printf("Not from neighbor or stopping\n");
-  //   }
-  
   PROCESS_END();
 }
 
@@ -524,24 +519,46 @@ PROCESS_THREAD(bcast_rx_process, ev, data)
 	  // Reset number of received neighbor messages for the round and increment round counter
 	  num_neighbor_messages_recv = 0;
 	  cur_cycle = cur_cycle + 1;
+	  out.iter = cur_cycle;
 	  
 	  // Update local estimate with local gradient information
 	  reading = (((int64_t)light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC)) << PREC_SHIFT) - MODEL_C;
 	  grad_iterate( cur_data, out.data, DATA_LEN, reading );
 	  
 	  // Check stop condition and set stop variable and change output message key if necessary
-	  
+	  if(cauchy_conv(msg.data))
+	  {
+		stop = 1;
+		out.key = MKEY + 1;
+	  }
 	  
 	  // Transmit local estimate to each neighbor in the neighbor list with random wait time inbetween
 	  for(i = 0; i < id_num_neighbors[NODE_ID - START_ID]; i++)
 	  {
-		  
+		// Wait random multiple of 1/32 seconds, uniformly distributed on 0-1 seconds to reduce collisions
+		// and reliably send ( with acks and re-tx's ) to neighbor
+		// May need to randomly offset retransmissions as well.
+		uint8_t r;
+		r = random_rand() % 32;
+		
+		etimer_set(&et, CLOCK_SECOND * (r/32);
+	    PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+	    
+	    packetbuf_copyfrom( &out,sizeof(out) );	    
+	    runicast_send(&runicast, &(neighbors[i]), MAX_RETRANSMISSIONS);
+	    
+	    // Wait until we are done transmitting
+	    while( runicast_is_transmitting(&runicast) )
+	    {
+	      etimer_set(&et, CLOCK_SECOND/32);
+	      PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+	    }
 	  }
 	  
-	  // Transmit local estimate to the sniffer node
-	  
-	  
-	  }
+      // Unreliable broadcast of local estimate to the sniffer node
+      packetbuf_copyfrom( &out,sizeof(out) );
+	  broadcast_send(&broadcast);	  	  
+  }
 	  
   else if(msg.key == CKEY && stop)
   {
