@@ -31,7 +31,7 @@ broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)
       printf(" %"PRIi64, msg.data[i]);
     }
   
-    printf("\n");
+    printf("\n");l
   }
 }
 

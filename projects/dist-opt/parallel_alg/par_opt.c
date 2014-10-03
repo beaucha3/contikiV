@@ -45,7 +45,7 @@
 #define CLOCK_NODE_0 20
 #define CLOCK_NODE_1 0
 #define NODE_ID (rimeaddr_node_addr.u8[0])
-#define MAX_ITER 1000      // Max iteration number, algorithm will terminate at this point regardless of epsilon
+#define MAX_ITER 1000      // Max iteration number, algo#define NUM_NBRS 5      // Number of neighbors, including selfrithm will terminate at this point regardless of epsilon
 #define RWIN 16ll          // Number of readings to average light sensor reading over
 
 // Rime constants
@@ -68,6 +68,7 @@
 #define ID2ROW { 0, 0, 0, 1, 2, 2, 2, 1, 1 }
 #define ID2COL { 0, 1, 2, 2, 2, 1, 0, 0, 1 }
 #define ID2NUM_NEIGHBORS { 2, 3, 2, 3, 2, 3, 2, 3, 4}
+#define MAX_NBRS 4      // Max number of neighbors
 
 #include "contiki.h"
 #include <stdio.h>
@@ -107,8 +108,10 @@ static int64_t max_height = (30ll << PREC_SHIFT);
 static int64_t min_height = (3ll << PREC_SHIFT); 
 
 // List of neighbors
-static int64_t id_num_neighbors[] = ID2NUM_NEIGHBORS;
-static rimeaddr_t neighbors[id_num_neighbors[NODE_ID - START_ID]]; 
+// All nodes have 4 "neighbors", but if they don't actually have that many, the vector 
+// is padded with its own address. Only "neighbors" that have a different address
+// than it's own, will be sent messages
+static rimeaddr_t neighbors[MAX_NBRS]; 
 
 // Sniffer node address
 static rimeaddr_t sniffer;
@@ -474,25 +477,29 @@ PROCESS_THREAD(bcast_rx_process, ev, data)
 	  }
 	  
 	  // Transmit local estimate to each neighbor in the neighbor list with random wait time inbetween
-	  for(i=0; i<id_num_neighbors[NODE_ID - START_ID]; i++)
+	  for(i=0; i<MAX_NBRS; i++)
 	  {
-		// Wait random multiple of 1/32 seconds, uniformly distributed on 0-1 seconds to reduce collisions
-		// and reliably send ( with acks and re-tx's ) to neighbor
-		// May need to randomly offset retransmissions as well.
-		uint8_t r;
-		r = random_rand() % 32;
+		// Do not transmit to ourselves obviously
+		if(!rimeaddr_cmp(&(neighbors[i]), rimeaddr_node_addr))
+		{
+		  // Wait random multiple of 1/32 seconds, uniformly distributed on 0-1 seconds to reduce collisions
+		  // and reliably send ( with acks and re-tx's ) to neighbor
+		  // May need to randomly offset retransmissions as well.
+		  uint8_t r;
+		  r = random_rand() % 32;
 		
-		etimer_set(&et, CLOCK_SECOND * (r/32);
-	    PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
-	    
-	    packetbuf_copyfrom( &out,sizeof(out) );	    
-	    runicast_send(&runicast, &(neighbors[i]), MAX_RETRANSMISSIONS);
-	    
-	    // Wait until we are done transmitting
-	    while( runicast_is_transmitting(&runicast) )
-	    {
-	      etimer_set(&et, CLOCK_SECOND/32);
+		  etimer_set(&et, CLOCK_SECOND * (r/32);
 	      PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+	    
+	      packetbuf_copyfrom( &out,sizeof(out) );	    
+	      runicast_send(&runicast, &(neighbors[i]), MAX_RETRANSMISSIONS);
+	    
+	      // Wait until we are done transmitting
+	      while( runicast_is_transmitting(&runicast) )
+	      {
+	        etimer_set(&et, CLOCK_SECOND/32);
+	        PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+	      }
 	    }
 	  }
 	  
@@ -659,9 +666,12 @@ uint8_t is_neighbor( const rimeaddr_t* a )
   
   if( a )
   {
-    for( i=0; i<id_num_neighbors[NODE_ID - START_ID]; i++ )
+    for( i=0; i<MAX_NBRS; i++ )
     {
-      retval = retval || rimeaddr_cmp(&(neighbors[i]), a);
+      if(!rimeaddr_cmp(&(neighbors[i]), rimeaddr_node_addr))
+        {
+	      retval = retval || rimeaddr_cmp(&(neighbors[i]), a);
+		}
     }
   }
   
@@ -682,9 +692,6 @@ void gen_neighbor_list()
   
   // Get our row and column
   rimeaddr2rc( rimeaddr_node_addr, &row, &col );
-  
-  // Define first "neighbor" to be this node
-  rimeaddr_copy( &(neighbors[0]), &rimeaddr_node_addr );
   
   // Get rime addresses of neighbor nodes
   
