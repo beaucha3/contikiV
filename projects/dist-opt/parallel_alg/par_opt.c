@@ -123,6 +123,10 @@ static rimeaddr_t sniffer;
 // Functions to get location information from id
 int64_t get_row();
 int64_t get_col();
+
+void rimeaddr2rc( rimeaddr_t a, unsigned int *row, unsigned int *col );
+void rc2rimeaddr( rimeaddr_t* a , unsigned int row, unsigned int col );
+
 uint8_t is_neighbor( const rimeaddr_t* a );
 void gen_neighbor_list();
 
@@ -139,6 +143,15 @@ int64_t f_model(int64_t* iterate);
 /*
  * Communications handlers
  */
+ 
+ /*
+ * Processes
+ */
+PROCESS(main_process, "main");
+PROCESS(rx_process, "rx_proc");
+PROCESS(bcast_rx_process, "bcast_rx_proc");
+AUTOSTART_PROCESSES(&main_process);
+
 static struct broadcast_conn broadcast; 
 static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)
 {	
@@ -147,17 +160,7 @@ static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)
 
 
 static const struct broadcast_callbacks broadcast_call = {broadcast_recv};
-
 static struct runicast_conn runicast;
-
-/*
- * Processes
- */
-PROCESS(main_process, "main");
-PROCESS(rx_process, "rx_proc");
-PROCESS(bcast_rx_process, "bcast_rx_proc");
-AUTOSTART_PROCESSES(&main_process);
-
 /*
  * Sub-function
  * Computes the next iteration of the algorithm
@@ -414,7 +417,7 @@ PROCESS_THREAD(rx_process, ev, data)
     int i;
     for(i=0; i<DATA_LEN; i++)
     {
-		tot_data[i] = tot_data[i] + msg.data[i]
+		tot_data[i] = tot_data[i] + msg.data[i];
 	}  
   }
   else if((stop || msg.key == MKEY + 1) && is_neighbor( (rimeaddr_t*) data ))
@@ -442,7 +445,6 @@ PROCESS_THREAD(bcast_rx_process, ev, data)
   if(msg.key == CKEY && !stop)
   {		  
 	  static struct etimer et;
-	  static uint8_t stop = 0;
 	  static opt_message_t out;
 	  static int64_t reading = 0;
 	 
@@ -470,7 +472,7 @@ PROCESS_THREAD(bcast_rx_process, ev, data)
 	  grad_iterate( cur_data, out.data, DATA_LEN, reading );
 	  
 	  // Check stop condition and set stop variable and change output message key if necessary
-	  if(cauchy_conv(msg.data))
+	  if(cauchy_conv(out.data))
 	  {
 		stop = 1;
 		out.key = MKEY + 1;
@@ -480,7 +482,7 @@ PROCESS_THREAD(bcast_rx_process, ev, data)
 	  for(i=0; i<MAX_NBRS; i++)
 	  {
 		// Do not transmit to ourselves obviously
-		if(!rimeaddr_cmp(&(neighbors[i]), rimeaddr_node_addr))
+		if(!rimeaddr_cmp(&(neighbors[i]), &rimeaddr_node_addr))
 		{
 		  // Wait random multiple of 1/32 seconds, uniformly distributed on 0-1 seconds to reduce collisions
 		  // and reliably send ( with acks and re-tx's ) to neighbor
@@ -488,7 +490,7 @@ PROCESS_THREAD(bcast_rx_process, ev, data)
 		  uint8_t r;
 		  r = random_rand() % 32;
 		
-		  etimer_set(&et, CLOCK_SECOND * (r/32);
+		  etimer_set(&et, CLOCK_SECOND * (r/32));
 	      PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 	    
 	      packetbuf_copyfrom( &out,sizeof(out) );	    
@@ -668,7 +670,7 @@ uint8_t is_neighbor( const rimeaddr_t* a )
   {
     for( i=0; i<MAX_NBRS; i++ )
     {
-      if(!rimeaddr_cmp(&(neighbors[i]), rimeaddr_node_addr))
+      if(!rimeaddr_cmp(&(neighbors[i]), &rimeaddr_node_addr))
         {
 	      retval = retval || rimeaddr_cmp(&(neighbors[i]), a);
 		}
