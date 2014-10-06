@@ -57,13 +57,13 @@
  * Arrays to convert Node ID to row/column
  * Lower left node is at (0,0), and arrays are indexed 
  * with NODE_ID. Full grid topology, not single cycle.
- * All comm links are bi-directional
+ * All comm links are bi-directional, ordering is row-major
  *
- * 16 - 15 - 14
- *  |    |    |
- * 17 - 18 - 13
- *  |    |    |
  * 10 - 11 - 12
+ *  |    |    |
+ * 13 - 14 - 15
+ *  |    |    |
+ * 16 - 17 - 18
  */
 #define ID2ROW { 0, 0, 0, 1, 2, 2, 2, 1, 1 }
 #define ID2COL { 0, 1, 2, 2, 2, 1, 0, 0, 1 }
@@ -605,7 +605,34 @@ int64_t norm2(int64_t* a, int64_t* b, int len)
 {
   int i;
   int64_t retval = 0;
-  
+  /*
+ * Calculates the rime address of the node at (row, col) and writes it
+ * in a.  row and col are one-based (there is no row 0 or col 0).
+ * 
+ * Assumes nodes are in row major order (e.g., row 1 contains 
+ * nodes 1,2,3,...
+ */
+void rc2rimeaddr( rimeaddr_t* a , unsigned int row, unsigned int col )
+{
+  if( a )
+  {
+    a->u8[0] = (START_ID - 1) + (row-1)*MAX_COLS + col;
+    a->u8[1] = 0;
+  }
+}
+
+/*
+ * Calculates the row and column of the node with the rime address a
+ * and writes it into row and col.
+ */
+void rimeaddr2rc( rimeaddr_t a, unsigned int *row, unsigned int *col )
+{
+  if( row && col )
+  {
+    *row = ((a.u8[0] - START_ID ) / MAX_COLS) + 1;
+    *col = ((a.u8[0] - START_ID ) % MAX_COLS) + 1;
+  }
+}
   if( a != NULL && b != NULL )
   {
     for( i=0; i<len; i++ )
