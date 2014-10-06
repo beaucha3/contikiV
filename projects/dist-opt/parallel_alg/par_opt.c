@@ -442,7 +442,7 @@ PROCESS_THREAD(bcast_rx_process, ev, data)
   packetbuf_copyto(&msg);
   
   // Only start the round if the message is a clock type 
-  if(msg.key == CKEY && !stop)
+  if(msg.key == CKEY && !stop && cur_cycle <= MAX_ITER)
   {		  
 	  static struct etimer et;
 	  static opt_message_t out;
