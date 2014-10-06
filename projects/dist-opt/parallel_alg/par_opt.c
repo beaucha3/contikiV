@@ -321,6 +321,12 @@ PROCESS_THREAD(main_process, ev, data)
   sniffer.u8[0] = SNIFFER_NODE_0;
   sniffer.u8[1] = SNIFFER_NODE_1;
     
+  // Get neighbor list
+  gen_neighbor_list();
+  
+  // Seed random number generator with node's address
+  random_init(rimeaddr_node_addr.u8[0] + rimeaddr_node_addr.u8[1]);
+  
   SENSORS_ACTIVATE(light_sensor);
   
   etimer_set(&et, CLOCK_SECOND*2);
@@ -328,7 +334,6 @@ PROCESS_THREAD(main_process, ev, data)
   
   broadcast_open(&broadcast, SNIFFER_CHANNEL, &broadcast_call);
   runicast_open(&runicast, COMM_CHANNEL, &runicast_callbacks);
-
   
 #if CALIB_C > 0
   /*
@@ -757,4 +762,33 @@ void gen_neighbor_list()
     printf("Neighbor %d at %d.%d\n", i, (neighbors[i]).u8[0], (neighbors[i]).u8[1]);
   }
 #endif
+}
+
+/*
+ * Calculates the rime address of the node at (row, col) and writes it
+ * in a.  row and col are one-based (there is no row 0 or col 0).
+ * 
+ * Assumes nodes are in row major order (e.g., row 1 contains 
+ * nodes 1,2,3,...
+ */
+void rc2rimeaddr( rimeaddr_t* a , unsigned int row, unsigned int col )
+{
+  if( a )
+  {
+    a->u8[0] = (START_ID - 1) + (row-1)*MAX_COLS + col;
+    a->u8[1] = 0;
+  }
+}
+
+/*
+ * Calculates the row and column of the node with the rime address a
+ * and writes it into row and col.
+ */
+void rimeaddr2rc( rimeaddr_t a, unsigned int *row, unsigned int *col )
+{
+  if( row && col )
+  {
+    *row = ((a.u8[0] - START_ID ) / MAX_COLS) + 1;
+    *col = ((a.u8[0] - START_ID ) % MAX_COLS) + 1;
+  }
 }
