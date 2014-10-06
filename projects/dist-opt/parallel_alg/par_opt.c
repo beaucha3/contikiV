@@ -472,7 +472,7 @@ PROCESS_THREAD(bcast_rx_process, ev, data)
 	  grad_iterate( cur_data, out.data, DATA_LEN, reading );
 	  
 	  // Check stop condition and set stop variable and change output message key if necessary
-	  if(cauchy_conv(out.data))
+	  if(cauchy_conv(out.data) || cur_cycle == MAX_ITER)
 	  {
 		stop = 1;
 		out.key = MKEY + 1;
