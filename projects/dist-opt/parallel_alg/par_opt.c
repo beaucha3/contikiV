@@ -49,7 +49,7 @@
 #define RWIN 16ll          // Number of readings to average light sensor reading over
 
 // Rime constants
-#define DEBUG 0
+#define DEBUG 1
 #define MAX_RETRANSMISSIONS 4
 #define NUM_HISTORY_ENTRIES 4
 
@@ -771,7 +771,7 @@ void gen_neighbor_list()
   }
     
   // West neighbor, ensure col != 1
-  if( col == 1 )
+  if( col == 0 )
   {
     // Can't go West, use our address
     rimeaddr_copy( &(neighbors[3]), &rimeaddr_node_addr );
@@ -783,10 +783,10 @@ void gen_neighbor_list()
     rimeaddr_copy( &(neighbors[3]), &a );
   }
   
-#if DEBUG > 1
+#if DEBUG > 0
   int i;
   
-  for( i=0; i<MAX_NBRS - 1; i++ )
+  for( i=0; i<MAX_NBRS; i++ )
   {
     printf("Neighbor %d at %d.%d\n", i, (neighbors[i]).u8[0], (neighbors[i]).u8[1]);
   }
