@@ -37,8 +37,8 @@
 
 // Special Node Addresses and Topology Constants
 
-#define MAX_ROWS 3      // Number of rows in sensor grid
-#define MAX_COLS 3      // Number of columns in sensor grid
+#define MAX_ROWS 2      // Max row number in sensor grid (0 - MAX_ROWS)
+#define MAX_COLS 2      // Max column number in sensor grid (0 - MAX_COLS)
 #define START_ID  10    // ID of first node in chain
 #define SNIFFER_NODE_0 25
 #define SNIFFER_NODE_1 0
@@ -55,7 +55,7 @@
 
 /*
  * Arrays to convert Node ID to row/column
- * Lower left node is at (0,0), and arrays are indexed 
+ * Top left node is at (0,0), and arrays are indexed 
  * with NODE_ID. Full grid topology, not single cycle.
  * All comm links are bi-directional, ordering is row-major
  *
@@ -65,9 +65,9 @@
  *  |    |    |
  * 16 - 17 - 18
  */
-#define ID2ROW { 0, 0, 0, 1, 2, 2, 2, 1, 1 }
-#define ID2COL { 0, 1, 2, 2, 2, 1, 0, 0, 1 }
-#define ID2NUM_NEIGHBORS { 2, 3, 2, 3, 2, 3, 2, 3, 4}
+#define ID2ROW { 0, 0, 0, 1, 1, 1, 2, 2, 2 }
+#define ID2COL { 0, 1, 2, 0, 1, 2, 0, 1, 2 }
+#define ID2NUM_NEIGHBORS { 2, 3, 2, 3, 4, 3, 2, 3, 2}
 #define MAX_NBRS 4      // Max number of neighbors
 
 #include "contiki.h"
@@ -605,7 +605,19 @@ int64_t norm2(int64_t* a, int64_t* b, int len)
 {
   int i;
   int64_t retval = 0;
-  /*
+  
+  if( a != NULL && b != NULL )
+  {
+    for( i=0; i<len; i++ )
+    {
+      retval += (a[i] - b[i])*(a[i] - b[i]);
+    }
+  }
+  
+  return retval;
+}
+
+/*
  * Calculates the rime address of the node at (row, col) and writes it
  * in a.  row and col are one-based (there is no row 0 or col 0).
  * 
@@ -616,7 +628,7 @@ void rc2rimeaddr( rimeaddr_t* a , unsigned int row, unsigned int col )
 {
   if( a )
   {
-    a->u8[0] = (START_ID - 1) + (row-1)*MAX_COLS + col;
+    a->u8[0] = (START_ID) + (row)*(MAX_COLS + 1) + col;
     a->u8[1] = 0;
   }
 }
@@ -629,19 +641,9 @@ void rimeaddr2rc( rimeaddr_t a, unsigned int *row, unsigned int *col )
 {
   if( row && col )
   {
-    *row = ((a.u8[0] - START_ID ) / MAX_COLS) + 1;
-    *col = ((a.u8[0] - START_ID ) % MAX_COLS) + 1;
+    *row = ((a.u8[0] - START_ID ) / (MAX_COLS + 1));
+    *col = ((a.u8[0] - START_ID ) % (MAX_COLS + 1));
   }
-}
-  if( a != NULL && b != NULL )
-  {
-    for( i=0; i<len; i++ )
-    {
-      retval += (a[i] - b[i])*(a[i] - b[i]);
-    }
-  }
-  
-  return retval;
 }
 
 /*
@@ -729,93 +731,64 @@ void gen_neighbor_list()
   
   // Get rime addresses of neighbor nodes
   
-  // North neighbor, ensure row != 1
-  if( row == 1 )
+  // North neighbor, ensure row != 0
+  if( row == 0 )
   {
     // Can't go North, use our address
-    rimeaddr_copy( &(neighbors[1]), &rimeaddr_node_addr );
+    rimeaddr_copy( &(neighbors[0]), &rimeaddr_node_addr );
   }
   else
   {
     // Get address of node to North, copy to neighbors list
     rc2rimeaddr( &a, row-1, col );
-    rimeaddr_copy( &(neighbors[1]), &a );
+    rimeaddr_copy( &(neighbors[0]), &a );
   }
     
   // East neighbor, ensure col != MAX_COLS
   if( col == MAX_COLS )
   {
     // Can't go East, use our address
-    rimeaddr_copy( &(neighbors[2]), &rimeaddr_node_addr );
+    rimeaddr_copy( &(neighbors[1]), &rimeaddr_node_addr );
   }
   else
   {
     // Get address of node to East, copy to neighbors list
     rc2rimeaddr( &a, row, col+1 );
-    rimeaddr_copy( &(neighbors[2]), &a );
+    rimeaddr_copy( &(neighbors[1]), &a );
   }
   
   // South neighbor, ensure row != MAX_ROWS
   if( row ==  MAX_ROWS )
   {
     // Can't go South, use our address
-    rimeaddr_copy( &(neighbors[3]), &rimeaddr_node_addr );
+    rimeaddr_copy( &(neighbors[2]), &rimeaddr_node_addr );
   }
   else
   {
     // Get address of node to South, copy to neighbors list
     rc2rimeaddr( &a, row+1, col );
-    rimeaddr_copy( &(neighbors[3]), &a );
+    rimeaddr_copy( &(neighbors[2]), &a );
   }
     
   // West neighbor, ensure col != 1
   if( col == 1 )
   {
     // Can't go West, use our address
-    rimeaddr_copy( &(neighbors[4]), &rimeaddr_node_addr );
+    rimeaddr_copy( &(neighbors[3]), &rimeaddr_node_addr );
   }
   else
   {
     // Get address of node to West, copy to neighbors list
     rc2rimeaddr( &a, row, col-1 );
-    rimeaddr_copy( &(neighbors[4]), &a );
+    rimeaddr_copy( &(neighbors[3]), &a );
   }
   
 #if DEBUG > 1
   int i;
   
-  for( i=0; i<5; i++ )
+  for( i=0; i<MAX_NBRS - 1; i++ )
   {
     printf("Neighbor %d at %d.%d\n", i, (neighbors[i]).u8[0], (neighbors[i]).u8[1]);
   }
 #endif
-}
-
-/*
- * Calculates the rime address of the node at (row, col) and writes it
- * in a.  row and col are one-based (there is no row 0 or col 0).
- * 
- * Assumes nodes are in row major order (e.g., row 1 contains 
- * nodes 1,2,3,...
- */
-void rc2rimeaddr( rimeaddr_t* a , unsigned int row, unsigned int col )
-{
-  if( a )
-  {
-    a->u8[0] = (START_ID - 1) + (row-1)*MAX_COLS + col;
-    a->u8[1] = 0;
-  }
-}
-
-/*
- * Calculates the row and column of the node with the rime address a
- * and writes it into row and col.
- */
-void rimeaddr2rc( rimeaddr_t a, unsigned int *row, unsigned int *col )
-{
-  if( row && col )
-  {
-    *row = ((a.u8[0] - START_ID ) / MAX_COLS) + 1;
-    *col = ((a.u8[0] - START_ID ) % MAX_COLS) + 1;
-  }
 }
