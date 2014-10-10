@@ -50,7 +50,7 @@
 
 // Rime constants
 #define DEBUG 1
-#define MAX_RETRANSMISSIONS 4
+#define MAX_RETRANSMISSIONS 1
 #define NUM_HISTORY_ENTRIES 4
 
 /*
@@ -302,7 +302,7 @@ static void sent_runicast(struct runicast_conn *c, const rimeaddr_t *to, uint8_t
 static void timedout_runicast(struct runicast_conn *c, const rimeaddr_t *to, uint8_t retransmissions)
 {
   #if DEBUG > 0
-     printf("runicast message timed out when sending to %d.%d, retransmissions %d\n",
+     printf("runicast message timed out when sending to %d , %d, retransmissions %d\n",
          to->u8[0], to->u8[1], retransmissions);
    #endif  
 }

@@ -12,7 +12,7 @@
 #include "dev/button-sensor.h"
 #include "par_opt.h"
 
-#define PERIOD CLOCK_SECOND*10
+#define PERIOD CLOCK_SECOND*20
 
 /*---------------------------------------------------------------------------*/
 PROCESS(broadcast_clock_process, "Broadcast Clock");
@@ -45,10 +45,6 @@ PROCESS_THREAD(broadcast_clock_process, ev, data)
   
   while(1) 
   {
-    // Delay by clock period 
-    etimer_set(&et, PERIOD);
-    PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
-
     // Broadcast clock message
     packetbuf_copyfrom( &out,sizeof(out) );
     broadcast_send(&broadcast);
@@ -59,7 +55,11 @@ PROCESS_THREAD(broadcast_clock_process, ev, data)
     etimer_set(&et, CLOCK_SECOND / 8 );
     PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
    
-    leds_off( LEDS_GREEN );  
+    leds_off( LEDS_GREEN );
+    
+    // Delay by clock period 
+    etimer_set(&et, PERIOD);
+    PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));  
   }
 
   PROCESS_END();
