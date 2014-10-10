@@ -45,7 +45,7 @@
 #define CLOCK_NODE_0 20
 #define CLOCK_NODE_1 0
 #define NODE_ID (rimeaddr_node_addr.u8[0])
-#define MAX_ITER 1000      // Max iteration number, algo#define NUM_NBRS 5      // Number of neighbors, including selfrithm will terminate at this point regardless of epsilon
+#define MAX_ITER 1000      // Max iteration number, algorithm will terminate at this point regardless of epsilon
 #define RWIN 16ll          // Number of readings to average light sensor reading over
 
 // Rime constants
@@ -152,7 +152,8 @@ PROCESS(rx_process, "rx_proc");
 PROCESS(bcast_rx_process, "bcast_rx_proc");
 AUTOSTART_PROCESSES(&main_process);
 
-static struct broadcast_conn broadcast; 
+static struct broadcast_conn broadcast;
+static struct broadcast_conn broadcast_clock; 
 static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)
 {	
   process_start(&bcast_rx_process, (char*)from);
@@ -239,8 +240,10 @@ MEMB(history_mem, struct history_entry, NUM_HISTORY_ENTRIES);
 
 static void recv_runicast(struct runicast_conn *c, const rimeaddr_t *from, uint8_t seqno)
 {
-   //printf("runicast message received from %d.%d, seqno %d\n",
-          //from->u8[0], from->u8[1], seqno);
+   #if DEBUG > 0
+     printf("runicast message received from %d.%d, seqno %d\n",
+          from->u8[0], from->u8[1], seqno);
+   #endif   
   
   /* Sender history */
   struct history_entry *e = NULL;
@@ -272,8 +275,12 @@ static void recv_runicast(struct runicast_conn *c, const rimeaddr_t *from, uint8
     /* Detect duplicate callback */
     if(e->seq == seqno) 
     {
-//       printf("runicast message received from %d.%d, seqno %d (DUPLICATE)\n",
-//              from->u8[0], from->u8[1], seqno);
+      #if DEBUG > 0
+        printf("runicast message received from %d.%d, seqno %d (DUPLICATE)\n",
+		  from->u8[0], from->u8[1], seqno);
+      #endif 
+
+
       return;
     }
     /* Update existing history entry */
@@ -285,14 +292,19 @@ static void recv_runicast(struct runicast_conn *c, const rimeaddr_t *from, uint8
 
 static void sent_runicast(struct runicast_conn *c, const rimeaddr_t *to, uint8_t retransmissions)
 {
-   //printf("runicast message sent to %d.%d, retransmissions %d\n",
-          //to->u8[0], to->u8[1], retransmissions);
+   #if DEBUG > 0
+     printf("runicast message sent to %d.%d, retransmissions %d\n",
+          to->u8[0], to->u8[1], retransmissions);
+   #endif
+   
 }
 
 static void timedout_runicast(struct runicast_conn *c, const rimeaddr_t *to, uint8_t retransmissions)
 {
-  //printf("runicast message timed out when sending to %d.%d, retransmissions %d\n",
-         //to->u8[0], to->u8[1], retransmissions);
+  #if DEBUG > 0
+     printf("runicast message timed out when sending to %d.%d, retransmissions %d\n",
+         to->u8[0], to->u8[1], retransmissions);
+   #endif  
 }
 
 //static const struct broadcast_callbacks broadcast_call = {broadcast_recv};
@@ -333,6 +345,7 @@ PROCESS_THREAD(main_process, ev, data)
   PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
   
   broadcast_open(&broadcast, SNIFFER_CHANNEL, &broadcast_call);
+  broadcast_open(&broadcast_clock, CLOCK_CHANNEL, &broadcast_call);
   runicast_open(&runicast, COMM_CHANNEL, &runicast_callbacks);
   
 #if CALIB_C > 0
@@ -383,6 +396,11 @@ PROCESS_THREAD(rx_process, ev, data)
   
   static struct etimer et;
   static opt_message_t msg;
+  int i;
+  
+  #if DEBUG > 0
+      printf("Got neighbor message.\n");
+  #endif
   
   /*
    * Process the packet 
@@ -397,15 +415,19 @@ PROCESS_THREAD(rx_process, ev, data)
    
   leds_off( LEDS_GREEN );
   
-     //~ printf("%u %u", msg.iter, msg.key);
-     //~ 
-     //~ int i;
-     //~ for( i=0; i<DATA_LEN; i++ )
-     //~ {
-       //~ printf(" %"PRIi64, msg.data[i]);
-     //~ }
-     //~ 
-     //~ printf("\n");
+    
+  #if DEBUG > 0
+    printf("Data Received: \n");
+    printf("%u %u", msg.iter, msg.key);
+
+    for( i=0; i<DATA_LEN; i++ )
+    {
+      printf(" %"PRIi64, msg.data[i]);
+    }
+  
+    printf("\n");
+  #endif  
+     
        
   /*
    * packetbuf_dataptr() should return a pointer to an opt_message_t,
@@ -419,7 +441,7 @@ PROCESS_THREAD(rx_process, ev, data)
     // Add data to our running total for the round and increment received
     // message count 
     num_neighbor_messages_recv = num_neighbor_messages_recv + 1;
-    int i;
+
     for(i=0; i<DATA_LEN; i++)
     {
 		tot_data[i] = tot_data[i] + msg.data[i];
@@ -443,12 +465,20 @@ PROCESS_THREAD(bcast_rx_process, ev, data)
 {
   PROCESS_BEGIN();
   
-  static clock_message_t msg;
+  #if DEBUG > 0
+    printf("Got broadcast message.\n");
+  #endif
+  
+  static opt_message_t msg;
   packetbuf_copyto(&msg);
   
   // Only start the round if the message is a clock type 
   if(msg.key == CKEY && !stop && cur_cycle <= MAX_ITER)
-  {		  
+  {		
+	  #if DEBUG > 0
+        printf("Got clock message.\n");
+	  #endif
+	  
 	  static struct etimer et;
 	  static opt_message_t out;
 	  static int64_t reading = 0;
@@ -489,6 +519,11 @@ PROCESS_THREAD(bcast_rx_process, ev, data)
 		// Do not transmit to ourselves obviously
 		if(!rimeaddr_cmp(&(neighbors[i]), &rimeaddr_node_addr))
 		{
+		  #if DEBUG > 0
+            printf("Transmitting to neighbor %d at %d.\n", i, (neighbors[i]).u8[0]);
+	      #endif
+		  
+		  
 		  // Wait random multiple of 1/32 seconds, uniformly distributed on 0-1 seconds to reduce collisions
 		  // and reliably send ( with acks and re-tx's ) to neighbor
 		  // May need to randomly offset retransmissions as well.
@@ -509,6 +544,10 @@ PROCESS_THREAD(bcast_rx_process, ev, data)
 	      }
 	    }
 	  }
+	  
+	  #if DEBUG > 0
+        printf("Transmitting to sniffer.\n");
+	  #endif
 	  
       // Unreliable broadcast of local estimate to the sniffer node
       packetbuf_copyfrom( &out,sizeof(out) );
