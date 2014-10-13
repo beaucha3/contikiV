@@ -51,6 +51,7 @@
 // Rime constants
 #define DEBUG 1
 #define MAX_RETRANSMISSIONS 1
+#define MAX_WAIT 1 // Max of uniformly distributed random wait time for runicast transmissions
 #define NUM_HISTORY_ENTRIES 4
 
 /*
@@ -365,6 +366,11 @@ PROCESS_THREAD(main_process, ev, data)
   }
   
   model_c = (model_c / 50) << PREC_SHIFT;
+  
+  #if DEBUG > 0
+    printf("Calibration Constant C = %"PRIi64"\n", model_c);
+  #endif
+  
 #endif
   
   while(1)
@@ -396,7 +402,7 @@ PROCESS_THREAD(rx_process, ev, data)
   
   static struct etimer et;
   static opt_message_t msg;
-  int i;
+  static int i;
   
   #if DEBUG > 0
       printf("Got neighbor message.\n");
@@ -478,13 +484,13 @@ PROCESS_THREAD(bcast_rx_process, ev, data)
 	  #if DEBUG > 0
         printf("Got clock message.\n");
 	  #endif
-	  
+	 
 	  static struct etimer et;
 	  static opt_message_t out;
 	  static int64_t reading = 0;
 	 
 	  // Average local estimate with that of neighbors from the previous round, and reset aggregate data to zero
-	  int i;
+	  static int i;
 	  
 	  for(i=0; i<DATA_LEN; i++)
 	  {
@@ -517,37 +523,50 @@ PROCESS_THREAD(bcast_rx_process, ev, data)
 	  for(i=0; i<MAX_NBRS; i++)
 	  {
 		// Do not transmit to ourselves obviously
-		if(!rimeaddr_cmp(&(neighbors[i]), &rimeaddr_node_addr))
+		if(rimeaddr_cmp(&(neighbors[i]), &rimeaddr_node_addr))
 		{
-		  #if DEBUG > 0
-            printf("Transmitting to neighbor %d at %d.\n", i, (neighbors[i]).u8[0]);
-	      #endif
+			continue;
+		}
+					
+		#if DEBUG > 0
+          printf("Transmitting to neighbor %d at %d.\n", i, (&(neighbors[i]))->u8[0]);
+	    #endif
 		  
 		  
-		  // Wait random multiple of 1/32 seconds, uniformly distributed on 0-1 seconds to reduce collisions
-		  // and reliably send ( with acks and re-tx's ) to neighbor
-		  // May need to randomly offset retransmissions as well.
-		  uint8_t r;
-		  r = random_rand() % 32;
+		// Wait random multiple of 1/32 seconds, uniformly distributed on 0-MAX_WAIT seconds to reduce collisions
+		// and reliably send ( with acks and re-tx's ) to neighbor
+		// May need to randomly offset retransmissions as well.
+		uint8_t r;
+		r = random_rand() % 32;
 		
-		  etimer_set(&et, CLOCK_SECOND * (r/32));
+		#if DEBUG > 0
+		  printf("Random wait time: %d / 32 s.\n", r * MAX_WAIT);
+		#endif
+		
+		etimer_set(&et, (CLOCK_SECOND * r * MAX_WAIT)/32);
+	    PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+	    
+        packetbuf_copyfrom( &out,sizeof(out) );	    
+		runicast_send(&runicast, &(neighbors[i]), MAX_RETRANSMISSIONS);
+	      
+	    // Wait until we are done transmitting
+	    while( runicast_is_transmitting(&runicast) )
+	    {
+		  etimer_set(&et, CLOCK_SECOND/32);
 	      PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
-	    
-	      packetbuf_copyfrom( &out,sizeof(out) );	    
-	      runicast_send(&runicast, &(neighbors[i]), MAX_RETRANSMISSIONS);
-	    
-	      // Wait until we are done transmitting
-	      while( runicast_is_transmitting(&runicast) )
-	      {
-	        etimer_set(&et, CLOCK_SECOND/32);
-	        PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
-	      }
-	    }
+	    }	    
 	  }
 	  
 	  #if DEBUG > 0
         printf("Transmitting to sniffer.\n");
 	  #endif
+	  
+	  // Wait until we are done transmitting
+	  while( runicast_is_transmitting(&runicast) )
+	  {
+	    etimer_set(&et, CLOCK_SECOND/32);
+	    PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+	  }
 	  
       // Unreliable broadcast of local estimate to the sniffer node
       packetbuf_copyfrom( &out,sizeof(out) );
