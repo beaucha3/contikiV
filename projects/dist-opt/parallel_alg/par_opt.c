@@ -49,7 +49,7 @@
 #define RWIN 16ll          // Number of readings to average light sensor reading over
 
 // Rime constants
-#define DEBUG 1
+#define DEBUG 0
 #define MAX_RETRANSMISSIONS 1
 #define MAX_WAIT 1 // Max of uniformly distributed random wait time for runicast transmissions
 #define NUM_HISTORY_ENTRIES 4
@@ -378,12 +378,8 @@ PROCESS_THREAD(main_process, ev, data)
     etimer_set(&et, CLOCK_SECOND * 2 );
     PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
     
+    // Keep red LEDs on to indicate node is still alive
     leds_on( LEDS_RED );
-    
-    etimer_set(&et, CLOCK_SECOND / 8 );
-    PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
-    
-    leds_off( LEDS_RED );
   }
   
   SENSORS_DEACTIVATE(light_sensor);
@@ -478,20 +474,28 @@ PROCESS_THREAD(bcast_rx_process, ev, data)
   static opt_message_t msg;
   packetbuf_copyto(&msg);
   
+  static opt_message_t out;
+  static int i;
+  static struct etimer et;
+  
   // Only start the round if the message is a clock type 
   if(msg.key == CKEY && !stop && cur_cycle <= MAX_ITER)
   {		
+	  // Blink status LED to indicate we got a clock message
+	  leds_off( LEDS_RED );
+    
+	  etimer_set(&et, CLOCK_SECOND / 8 );
+      PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+    
+      leds_on( LEDS_RED );
+	  
 	  #if DEBUG > 0
         printf("Got clock message.\n");
 	  #endif
-	 
-	  static struct etimer et;
-	  static opt_message_t out;
+
 	  static int64_t reading = 0;
 	 
 	  // Average local estimate with that of neighbors from the previous round, and reset aggregate data to zero
-	  static int i;
-	  
 	  for(i=0; i<DATA_LEN; i++)
 	  {
 	    tot_data[i] = tot_data[i] + cur_data[i];
@@ -507,6 +511,7 @@ PROCESS_THREAD(bcast_rx_process, ev, data)
 	  num_neighbor_messages_recv = 0;
 	  cur_cycle = cur_cycle + 1;
 	  out.iter = cur_cycle;
+	  out.key = MKEY;
 	  
 	  // Update local estimate with local gradient information
 	  reading = (((int64_t)light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC)) << PREC_SHIFT) - MODEL_C;
@@ -517,6 +522,12 @@ PROCESS_THREAD(bcast_rx_process, ev, data)
 	  {
 		stop = 1;
 		out.key = MKEY + 1;
+		
+		//Save final data
+		for(i=0; i<DATA_LEN; i++)
+		{
+			cur_data[i] = (out.data)[i];
+		}
 	  }
 	  
 	  // Transmit local estimate to each neighbor in the neighbor list with random wait time inbetween
@@ -569,13 +580,38 @@ PROCESS_THREAD(bcast_rx_process, ev, data)
 	  }
 	  
       // Unreliable broadcast of local estimate to the sniffer node
+      for(i=0; i<DATA_LEN; i++)
+      {
+		cur_data[i] = (out.data)[i];
+      }
+      
       packetbuf_copyfrom( &out,sizeof(out) );
 	  broadcast_send(&broadcast);	  	  
   }
 	  
   else if(msg.key == CKEY && stop)
   {
+    out.iter = cur_cycle;
+    out.key = MKEY + 1;
+    
 	leds_on( LEDS_BLUE );
+	
+	// Blink status LED to indicate we got a clock message
+	leds_off( LEDS_RED );
+    
+	etimer_set(&et, CLOCK_SECOND / 8 );
+    PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+    
+    leds_on( LEDS_RED );
+    
+    // Unreliable broadcast of local estimate to the sniffer node
+    for(i=0; i<DATA_LEN; i++)
+	{
+		(out.data)[i] = cur_data[i];
+    }
+    
+    packetbuf_copyfrom( &out,sizeof(out) );
+	broadcast_send(&broadcast);
   }		  
  
   PROCESS_END();
@@ -679,7 +715,7 @@ int64_t norm2(int64_t* a, int64_t* b, int len)
  * Calculates the rime address of the node at (row, col) and writes it
  * in a.  row and col are one-based (there is no row 0 or col 0).
  * 
- * Assumes nodes are in row major order (e.g., row 1 contains 
+ * Assumes nodes are in row major order (e.g., row 0 contains 
  * nodes 1,2,3,...
  */
 void rc2rimeaddr( rimeaddr_t* a , unsigned int row, unsigned int col )
