@@ -13,6 +13,18 @@
  * all subfunctions.
  * 
  */
+ 
+#include "contiki.h"
+#include <stdio.h>
+#include <string.h>
+#include "net/rime.h"
+#include "dev/leds.h"
+#include "dev/light-sensor.h"
+#include "dev/button-sensor.h"
+#include "lib/memb.h"
+#include "random.h"
+
+#include "par_opt.h"
 
 /* 
  * Using fixed step size for now.
@@ -50,8 +62,8 @@
 
 // Rime constants
 #define DEBUG 0
-#define MAX_RETRANSMISSIONS 1
-#define MAX_WAIT 1 // Max of uniformly distributed random wait time for runicast transmissions
+#define MAX_RETRANSMISSIONS 3
+#define MAX_WAIT 2 // Max of uniformly distributed random wait time for runicast transmissions
 #define NUM_HISTORY_ENTRIES 4
 
 /*
@@ -70,18 +82,6 @@
 #define ID2COL { 0, 1, 2, 0, 1, 2, 0, 1, 2 }
 #define ID2NUM_NEIGHBORS { 2, 3, 2, 3, 4, 3, 2, 3, 2}
 #define MAX_NBRS 4      // Max number of neighbors
-
-#include "contiki.h"
-#include <stdio.h>
-#include <string.h>
-#include "net/rime.h"
-#include "dev/leds.h"
-#include "dev/light-sensor.h"
-#include "dev/button-sensor.h"
-#include "lib/memb.h"
-#include "random.h"
-
-#include "par_opt.h"
 
 /*
  * Global Variables
@@ -467,10 +467,6 @@ PROCESS_THREAD(bcast_rx_process, ev, data)
 {
   PROCESS_BEGIN();
   
-  #if DEBUG > 0
-    printf("Got broadcast message.\n");
-  #endif
-  
   static opt_message_t msg;
   packetbuf_copyto(&msg);
   
@@ -591,6 +587,10 @@ PROCESS_THREAD(bcast_rx_process, ev, data)
 	  
   else if(msg.key == CKEY && stop)
   {
+    #if DEBUG > 0
+        printf("Got clock message.\n");
+	#endif
+    
     out.iter = cur_cycle;
     out.key = MKEY + 1;
     

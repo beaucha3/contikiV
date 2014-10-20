@@ -12,7 +12,7 @@
 #include "dev/button-sensor.h"
 #include "par_opt.h"
 
-#define PERIOD CLOCK_SECOND*20
+#define PERIOD CLOCK_SECOND*30
 
 /*---------------------------------------------------------------------------*/
 PROCESS(broadcast_clock_process, "Broadcast Clock");
