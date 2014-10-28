@@ -44,8 +44,6 @@
 #define MODEL_C model_c
 #define SPACING 30ll      // Centimeters of spacing
 
-#define NUM_NODES 4   // Number of nodes in grid topology
-
 // Special Node Addresses and Topology Constants
 
 #define MAX_ROWS 1      // Max row number in sensor grid (0 - MAX_ROWS)
@@ -61,10 +59,9 @@
 #define MAX_ITER 1000      // Max iteration number, algorithm will terminate at this point regardless of epsilon
 #define RWIN 16ll          // Number of readings to average light sensor reading over
 
-// Rime constants
+//Debug printouts
 #define DEBUG 1
-#define MAX_RETRANSMISSIONS 4
-#define NUM_HISTORY_ENTRIES 4
+
 
 /*
  * Arrays to convert Node ID to row/column
@@ -97,6 +94,7 @@ static int64_t cur_data[DATA_LEN] = START_VAL;
 static int64_t tot_data[DATA_LEN] = {0};
 static int16_t num_neighbor_messages_recv = 0;
 static int16_t cur_cycle = 0;
+static int16_t clock_msg_id = 0; 
 static uint8_t stop = 0;
 //static int64_t model_c = 88ll << PREC_SHIFT;
 
@@ -158,7 +156,7 @@ static struct broadcast_conn broadcast;
 static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from){}
 
 static const struct broadcast_callbacks broadcast_call = {broadcast_recv};
-static struct runicast_conn runicast_clock;
+//static struct runicast_conn runicast_clock;
 static struct runicast_conn runicast;
 /*
  * Sub-function
@@ -185,10 +183,28 @@ MEMB(history_mem, struct history_entry, NUM_HISTORY_ENTRIES);
 
 static void recv_runicast(struct runicast_conn *c, const rimeaddr_t *from, uint8_t seqno)
 {
-   #if DEBUG > 0
-     printf("runicast message received from %d.%d, seqno %d\n",
-          from->u8[0], from->u8[1], seqno);
-   #endif   
+  #if DEBUG > 0
+    printf("runicast message received from %d.%d, seqno %d\n",
+        from->u8[0], from->u8[1], seqno);
+  #endif
+  
+  uint8_t new_clock_msg = 0;
+   
+  if(rimeaddr_cmp(from, &clock))
+  {
+    clock_message_t tmp_msg;
+	packetbuf_copyto(&tmp_msg);
+	
+	if(tmp_msg.id > clock_msg_id)
+	{
+		new_clock_msg = 1;
+		clock_msg_id = tmp_msg.id;
+		
+		#if DEBUG>0
+		 printf("Clock Message ID: %i Local Msg ID: %i\n", tmp_msg.id, clock_msg_id);
+		#endif
+	}
+  }
   
   /* Sender history */
   struct history_entry *e = NULL;
@@ -218,7 +234,7 @@ static void recv_runicast(struct runicast_conn *c, const rimeaddr_t *from, uint8
   else 
   {
     /* Detect duplicate callback */
-    if(e->seq == seqno) 
+    if(e->seq == seqno && (!rimeaddr_cmp(from, &clock) || (rimeaddr_cmp(from, &clock) && !new_clock_msg) ) )
     {
       #if DEBUG > 0
         printf("runicast message received from %d.%d, seqno %d (DUPLICATE)\n",
@@ -267,17 +283,16 @@ static const struct runicast_callbacks runicast_callbacks =
   timedout_runicast
 };
 
-void comms_close(struct runicast_conn *c1, struct runicast_conn *c2, struct broadcast_conn *b)
+void comms_close(struct runicast_conn *c, struct broadcast_conn *b)
 {
-  runicast_close(c1);
-  runicast_close(c2);
+  runicast_close(c);
   broadcast_close(b);
 }
 
 /*-------------------------------------------------------------------*/
 PROCESS_THREAD(main_process, ev, data)
 {
-  PROCESS_EXITHANDLER(comms_close(&runicast, &runicast_clock, &broadcast);)
+  PROCESS_EXITHANDLER(comms_close(&runicast, &broadcast);)
   PROCESS_BEGIN();
  
   static struct etimer et;
@@ -297,7 +312,7 @@ PROCESS_THREAD(main_process, ev, data)
   PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
   
   broadcast_open(&broadcast, SNIFFER_CHANNEL, &broadcast_call);
-  runicast_open(&runicast_clock, CLOCK_CHANNEL, &runicast_callbacks);
+  //runicast_open(&runicast_clock, CLOCK_CHANNEL, &runicast_callbacks);
   runicast_open(&runicast, COMM_CHANNEL, &runicast_callbacks);
   
 #if CALIB_C > 0
@@ -324,14 +339,14 @@ PROCESS_THREAD(main_process, ev, data)
   #endif
   
 #endif
+
+  // Keep red LEDs on to indicate node is still alive
+  leds_on( LEDS_RED );
   
   while(1)
   {
     etimer_set(&et, CLOCK_SECOND * 2 );
-    PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
-    
-    // Keep red LEDs on to indicate node is still alive
-    leds_on( LEDS_RED );
+    PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));    
   }
   
   //SENSORS_DEACTIVATE(light_sensor);
@@ -440,6 +455,12 @@ PROCESS_THREAD(clock_rx_process, ev, data)
 	  #if DEBUG > 0
         printf("Got clock message, round starting.\n");
 	  #endif
+	  
+	  // Correct cycle number if incorrect, i.e. we missed a clock message
+	  if(msg.cycle != cur_cycle)
+	  {
+		  cur_cycle = msg.cycle;
+	  }
 
 	  //static int64_t reading = 0;
 	  	  
@@ -487,26 +508,30 @@ PROCESS_THREAD(clock_rx_process, ev, data)
 	  }
 	  
 	  #if DEBUG > 0
+        printf("Transmitting to sniffer.\n");
+	  #endif
+	  
+	  // Unreliable broadcast of local estimate to the sniffer node
+      packetbuf_copyfrom( &out,sizeof(out) );
+	  broadcast_send(&broadcast);
+	  
+	  // Wait until we are done transmitting
+	  etimer_set(&et, CLOCK_SECOND);
+	  PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+	  
+	  #if DEBUG > 0
         printf("Transmitting to clock.\n");
 	  #endif
 	  
 	  packetbuf_copyfrom( &out,sizeof(out) );
-	  runicast_send(&runicast_clock, &sniffer, MAX_RETRANSMISSIONS);	  
-	  
-	  #if DEBUG > 0
-        printf("Transmitting to sniffer.\n");
-	  #endif
+	  runicast_send(&runicast, &clock, MAX_RETRANSMISSIONS);	  
 	  
 	  // Wait until we are done transmitting
 	  while( runicast_is_transmitting(&runicast) )
 	  {
 	    etimer_set(&et, CLOCK_SECOND/32);
 	    PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
-	  }
-	  
-      // Unreliable broadcast of local estimate to the sniffer node
-      packetbuf_copyfrom( &out,sizeof(out) );
-	  broadcast_send(&broadcast);	  	  
+	  }      	  	  
   }
   else if(msg.key == AKEY && !stop && cur_cycle <= MAX_ITER)
   {
@@ -529,6 +554,12 @@ PROCESS_THREAD(clock_rx_process, ev, data)
 	  // Reset number of received neighbor messages for the round and increment round counter
 	  num_neighbor_messages_recv = 0;
 	  cur_cycle = cur_cycle + 1;
+	  
+	  // Correct cycle number if incorrect, i.e. we missed a clock message
+	  if(msg.cycle != cur_cycle)
+	  {
+		  cur_cycle = msg.cycle;
+	  }
   }  
 	  
   else if((msg.key == CKEY || msg.key == AKEY) && stop)
