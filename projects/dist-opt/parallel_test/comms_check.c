@@ -36,7 +36,7 @@ PROCESS_THREAD(main_process, ev, data)
     PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
         
     msg.iter = msg.iter + 1;
-    packetbuf_copyto(&msg);
+    packetbuf_copyfrom(&msg, sizeof(msg));
     broadcast_send(&broadcast);
   }
 
