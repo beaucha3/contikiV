@@ -24,10 +24,15 @@ PROCESS_THREAD(main_process, ev, data)
   PROCESS_EXITHANDLER(broadcast_close(&broadcast);)
   PROCESS_BEGIN();
 
+  //rimeaddr_t cur_addr = rimeaddr_node_addr;
+  //cur_addr.u8[0] = 13; 
+  //rimeaddr_set_node_addr(&cur_addr);
+
   broadcast_open(&broadcast, SNIFFER_CHANNEL, &broadcast_call);
+
   msg.key = MKEY;
   msg.iter = 0;
-  msg.data[0] = 4096;
+  msg.data[0] = rimeaddr_node_addr.u8[0];
 
   while(1) 
   {

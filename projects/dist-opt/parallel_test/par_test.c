@@ -30,11 +30,11 @@
  * Actual step size is STEP/2^PREC_SHIFT, this is to keep all computations as 
  * integers
  */
-#define STEP 16ll
-#define PREC_SHIFT 12
+#define STEP 2ll
+#define PREC_SHIFT 9
 #define START_VAL { 0 }
-#define EPSILON 5000ll      // Epsilon for stopping condition actual epsilon is this value divided by 2^PREC_SHIFT
-#define CAUCHY_NUM 10    // Number of history elements for Cauchy test
+#define EPSILON 4ll      // Epsilon for stopping condition actual epsilon is this value divided by 2^PREC_SHIFT
+#define CAUCHY_NUM 5    // Number of history elements for Cauchy test
 
 // Model constants. Observation model follows (A/(r^2 + B)) + C
 // g_model is the denominator, f_model is the entire expression
@@ -112,7 +112,7 @@ static uint8_t stop = 0;
 // than it's own, will be sent messages
 static rimeaddr_t neighbors[MAX_NBRS]; 
 
-// Sniffer node address
+// Various addresses
 static rimeaddr_t sniffer;
 static rimeaddr_t clock;
 
@@ -129,7 +129,7 @@ void rc2rimeaddr( rimeaddr_t* a , unsigned int row, unsigned int col );
 
 uint8_t is_neighbor( const rimeaddr_t* a );
 void gen_neighbor_list();
-
+void init_node_addr();
 
 
 // Functions that assist in gradient computation/ convergence criterion check
@@ -156,7 +156,7 @@ static struct broadcast_conn broadcast;
 static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from){}
 
 static const struct broadcast_callbacks broadcast_call = {broadcast_recv};
-//static struct runicast_conn runicast_clock;
+static struct runicast_conn runicast_clock;
 static struct runicast_conn runicast;
 /*
  * Sub-function
@@ -165,7 +165,7 @@ static struct runicast_conn runicast;
 static void grad_iterate(int64_t* iterate, int64_t* result)
 {
 //  return iterate;
-  *result = ( *iterate - ((STEP * ( (1 << (NORM_ID + 1))*(*iterate) - (NORM_ID << (PREC_SHIFT + 1)))) >> PREC_SHIFT) );
+  *result = ( *iterate - ((STEP * ( (1 << (NORM_ID + PREC_SHIFT+ 1))*(*iterate) - (NORM_ID << (PREC_SHIFT + 1)))) >> PREC_SHIFT) );
 }
 
 
@@ -197,12 +197,12 @@ static void recv_runicast(struct runicast_conn *c, const rimeaddr_t *from, uint8
 	
 	if(tmp_msg.id > clock_msg_id)
 	{
-		new_clock_msg = 1;
-		clock_msg_id = tmp_msg.id;
-		
 		#if DEBUG>0
 		 printf("Clock Message ID: %i Local Msg ID: %i\n", tmp_msg.id, clock_msg_id);
 		#endif
+				
+		new_clock_msg = 1;
+		clock_msg_id = tmp_msg.id;
 	}
   }
   
@@ -250,11 +250,11 @@ static void recv_runicast(struct runicast_conn *c, const rimeaddr_t *from, uint8
   
   if((from->u8[0]) == CLOCK_NODE_0)
   {
-      process_start(&clock_rx_process, (char*)from);
+      process_start(&clock_rx_process, (char*)(from));
   }
-  else
+  else if(is_neighbor(from))
   {
-  	  process_start(&nbr_rx_process, (char*)from);
+  	  process_start(&nbr_rx_process, (char*)(from));
   }
 }
 
@@ -312,7 +312,7 @@ PROCESS_THREAD(main_process, ev, data)
   PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
   
   broadcast_open(&broadcast, SNIFFER_CHANNEL, &broadcast_call);
-  //runicast_open(&runicast_clock, CLOCK_CHANNEL, &runicast_callbacks);
+  runicast_open(&runicast_clock, CLOCK_CHANNEL, &runicast_callbacks);
   runicast_open(&runicast, COMM_CHANNEL, &runicast_callbacks);
   
 #if CALIB_C > 0
@@ -357,7 +357,7 @@ PROCESS_THREAD(main_process, ev, data)
 /*
  * Started when a neighbor runicast packet is received.
  * 
- * 'data' is the 'from' pointer
+ * 'data' is the pointer to the id of the last sender
  */
 PROCESS_THREAD(nbr_rx_process, ev, data)
 {
@@ -383,27 +383,13 @@ PROCESS_THREAD(nbr_rx_process, ev, data)
   PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
    
   leds_off( LEDS_GREEN );
-  
-    
-  #if DEBUG > 0
-    printf("Data Received: \n");
-    printf("%u %u", msg.iter, msg.key);
-
-    for( i=0; i<DATA_LEN; i++ )
-    {
-      printf(" %"PRIi64, msg.data[i]);
-    }
-  
-    printf("\n");
-  #endif  
-     
-       
+        
   /*
    * packetbuf_dataptr() should return a pointer to an opt_message_t,
    * but double-check to be sure.  Valid packets should start with
-   * MKEY, and we're only interested in packets from our neighbors.
+   * MKEY
    */
-  if( !stop && msg.key == MKEY && is_neighbor( (rimeaddr_t*) data ))
+  if( !stop && msg.key == MKEY)
   {
     leds_off( LEDS_BLUE );
 
@@ -416,11 +402,25 @@ PROCESS_THREAD(nbr_rx_process, ev, data)
 		tot_data[i] = tot_data[i] + msg.data[i];
 	}  
   }
-  else if((stop || msg.key == MKEY + 1) && is_neighbor( (rimeaddr_t*) data ))
+  else if((stop || msg.key == MKEY + 1) )
   {
 	  stop = 1;
 	  leds_on( LEDS_BLUE );
   }
+  
+  #if DEBUG > 0
+    printf("Data Received: \n");
+    printf("%u %u", msg.iter, msg.key);
+
+    for( i=0; i<DATA_LEN; i++ )
+    {
+      printf(" %"PRIi64, msg.data[i]);
+    }
+  
+    printf("\n");
+    printf("Number of neighbor messages this round: %u\n", num_neighbor_messages_recv);
+    
+  #endif 
   
   PROCESS_END();
 }
@@ -536,7 +536,7 @@ PROCESS_THREAD(clock_rx_process, ev, data)
   else if(msg.key == AKEY && !stop && cur_cycle <= MAX_ITER)
   {
       #if DEBUG > 0
-          printf("Got clock message, averaging and finishing the round.\n");
+        printf("Got clock message, averaging and finishing the round.\n");
 	  #endif
       
       // Average local estimate with that of neighbors from the previous round, and reset aggregate data to zero
@@ -550,6 +550,17 @@ PROCESS_THREAD(clock_rx_process, ev, data)
 	    cur_data[i] = tot_data[i]/(num_neighbor_messages_recv + 1);
 	    tot_data[i] = 0;
 	  }
+	  
+	  #if DEBUG > 0
+	    printf("Averaged data given %u messages: ", num_neighbor_messages_recv);
+	    
+	    for( i=0; i<DATA_LEN; i++ )
+        {
+          printf(" %"PRIi64, cur_data[i]);
+        }
+        
+        printf("\n");
+      #endif
 		  
 	  // Reset number of received neighbor messages for the round and increment round counter
 	  num_neighbor_messages_recv = 0;
@@ -865,3 +876,4 @@ void gen_neighbor_list()
   printf("Normalized ID is %i.\n", NORM_ID);
 #endif
 }
+
