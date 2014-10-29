@@ -165,7 +165,7 @@ static struct runicast_conn runicast;
 static void grad_iterate(int64_t* iterate, int64_t* result)
 {
 //  return iterate;
-  *result = ( *iterate - ((STEP * ( (1 << (NORM_ID + PREC_SHIFT+ 1))*(*iterate) - (NORM_ID << (PREC_SHIFT + 1)))) >> PREC_SHIFT) );
+  *result = ( *iterate - ((STEP * ( (1 << (NORM_ID + 1))*(*iterate) - (NORM_ID << (PREC_SHIFT + 1)))) >> PREC_SHIFT) );
 }
 
 
@@ -305,6 +305,14 @@ PROCESS_THREAD(main_process, ev, data)
     
   // Get neighbor list
   gen_neighbor_list();
+  
+  #if DEBUG > 0
+    int64_t x = (1 << PREC_SHIFT);
+    int64_t res;
+    
+    grad_iterate(&x, &res);
+	printf("Gradient Test: x = 1, iterate = %"PRIi64"\n", res);
+  #endif	
   
   SENSORS_ACTIVATE(light_sensor);
   
