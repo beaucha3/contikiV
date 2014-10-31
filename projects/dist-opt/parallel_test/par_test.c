@@ -30,7 +30,7 @@
  * Actual step size is STEP/2^PREC_SHIFT, this is to keep all computations as 
  * integers
  */
-#define STEP 2ll
+#define STEP 8ll
 #define PREC_SHIFT 9
 #define START_VAL { 0 }
 #define EPSILON 4ll      // Epsilon for stopping condition actual epsilon is this value divided by 2^PREC_SHIFT
