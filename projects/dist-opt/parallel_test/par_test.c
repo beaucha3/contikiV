@@ -581,7 +581,7 @@ PROCESS_THREAD(clock_rx_process, ev, data)
 	  }
   }  
 	  
-  else if((msg.key == CKEY || msg.key == AKEY) && stop)
+  else if((msg.key == CKEY) && stop)
   {
       #if DEBUG > 0
           printf("Got clock message.\n");
@@ -599,6 +599,34 @@ PROCESS_THREAD(clock_rx_process, ev, data)
       PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
     
       leds_on( LEDS_RED );
+      
+      // Transmit local estimate to each neighbor in the neighbor list
+	  for(i=0; i<MAX_NBRS; i++)
+	  {
+		// Do not transmit to ourselves obviously
+		if(rimeaddr_cmp(&(neighbors[i]), &rimeaddr_node_addr))
+		{
+			continue;
+		}
+					
+		#if DEBUG > 0
+          printf("Transmitting to neighbor %d at %d.\n", i, (&(neighbors[i]))->u8[0]);
+	    #endif
+	    
+        packetbuf_copyfrom( &out,sizeof(out) );	    
+		runicast_send(&runicast, &(neighbors[i]), MAX_RETRANSMISSIONS);
+	      
+	    // Wait until we are done transmitting
+	    while( runicast_is_transmitting(&runicast) )
+	    {
+		  etimer_set(&et, CLOCK_SECOND/32);
+	      PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+	    }	    
+	  }
+	  
+	  #if DEBUG > 0
+        printf("Transmitting to sniffer.\n");
+	  #endif
     
       // Unreliable broadcast of local estimate to the sniffer node
       for(i=0; i<DATA_LEN; i++)
@@ -608,6 +636,24 @@ PROCESS_THREAD(clock_rx_process, ev, data)
     
       packetbuf_copyfrom( &out,sizeof(out) );
 	  broadcast_send(&broadcast);
+	  
+	  // Wait until we are done transmitting
+	  etimer_set(&et, CLOCK_SECOND);
+	  PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+	  
+	  #if DEBUG > 0
+        printf("Transmitting to clock.\n");
+	  #endif
+	  
+	  packetbuf_copyfrom( &out,sizeof(out) );
+	  runicast_send(&runicast, &clock, MAX_RETRANSMISSIONS);	  
+	  
+	  // Wait until we are done transmitting
+	  while( runicast_is_transmitting(&runicast) )
+	  {
+	    etimer_set(&et, CLOCK_SECOND/32);
+	    PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+	  }  
   } 		  
  
   PROCESS_END();

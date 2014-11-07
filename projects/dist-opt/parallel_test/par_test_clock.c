@@ -16,6 +16,7 @@
 
 #define START_ID  10    // ID of first node in chain
 #define DEBUG 1
+#define MAX_CLOCK_WAIT (MAX_RETRANSMISSIONS + 1)*4
 
 /*---------------------------------------------------------------------------*/
 PROCESS(runicast_clock_process, "Runicast Clock");
@@ -135,6 +136,7 @@ PROCESS_THREAD(runicast_clock_process, ev, data)
   static struct etimer et;
   static clock_message_t out;
   static int i;
+  static int wait_count;
   static rimeaddr_t node_out;
   node_out.u8[1] = 0;
   
@@ -209,10 +211,18 @@ PROCESS_THREAD(runicast_clock_process, ev, data)
    
     leds_off( LEDS_GREEN );
     
+    wait_count = 0;    
     while(temp_node == cur_node)
     {
 	  etimer_set(&et, CLOCK_SECOND);
 	  PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+	  
+	  wait_count = wait_count + 1;
+	  
+	  if(wait_count == MAX_CLOCK_WAIT)
+	  {
+		  break;
+	  }	  
     }  
   }
 
