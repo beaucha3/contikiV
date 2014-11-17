@@ -31,6 +31,7 @@
  * Actual step size is STEP/2^PREC_SHIFT, this is to keep all computations as 
  * integers
  */
+#define TICK_PERIOD CLOCK_SECOND*10
 #define STEP 8ll
 #define PREC_SHIFT 9
 #define START_VAL { 0 }
@@ -110,7 +111,6 @@ static rimeaddr_t neighbors[MAX_NBRS];
 
 // Various addresses
 static rimeaddr_t sniffer;
-static rimeaddr_t clock;
 
 /*
  * Local function declarations
@@ -119,6 +119,7 @@ static rimeaddr_t clock;
 // Functions to get location information from id
 int64_t get_row();
 int64_t get_col();
+uint8_t get_num_nbrs();
 
 void rimeaddr2rc( rimeaddr_t a, unsigned int *row, unsigned int *col );
 void rc2rimeaddr( rimeaddr_t* a , unsigned int row, unsigned int col );
@@ -272,6 +273,9 @@ PROCESS_THREAD(main_process, ev, data)
   random_init(rimeaddr_node_addr.u8[0] + rimeaddr_node_addr.u8[1]);
   
   static struct etimer et;
+  static opt_message_t tick_msg;
+  static uint8_t rand_nbr, num_nbrs;
+  static int i, j;
       
   sniffer.u8[0] = SNIFFER_NODE_0;
   sniffer.u8[1] = SNIFFER_NODE_1;
@@ -295,57 +299,102 @@ PROCESS_THREAD(main_process, ev, data)
   broadcast_open(&broadcast, SNIFFER_CHANNEL, &broadcast_call);
   runicast_open(&runicast, COMM_CHANNEL, &runicast_callbacks);
   
-#if CALIB_C > 0
-  /*
-   * Code to calibrate light sensor at reset
-   * Takes 50 readings and averages them, storing the value
-   * in a global variable, model_c
-   */
-  static int i;
-  model_c = 0;
+  #if CALIB_C > 0
+    /*
+     * Code to calibrate light sensor at reset
+     * Takes 50 readings and averages them, storing the value
+     * in a global variable, model_c
+     */
+    model_c = 0;
   
-  for( i=0; i<50; i++ )
-  {
-    etimer_set(&et, CLOCK_SECOND/50);
-    PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
-    model_c += light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC);
-    //printf("model_c = %"PRIi64"\n", model_c);
-  }
+    for( i=0; i<50; i++ )
+    {
+      etimer_set(&et, CLOCK_SECOND/50);
+      PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+      model_c += light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC);
+      //printf("model_c = %"PRIi64"\n", model_c);
+    }
   
-  model_c = (model_c / 50) << PREC_SHIFT;
+    model_c = (model_c / 50) << PREC_SHIFT;
   
-  #if DEBUG > 0
-    printf("Calibration Constant C = %"PRIi64"\n", model_c);
+    #if DEBUG > 0
+      printf("Calibration Constant C = %"PRIi64"\n", model_c);
+    #endif
+  
   #endif
-  
-#endif
 
-  // Keep red LEDs on to indicate node is still alive
-  leds_on( LEDS_RED );
-  
   while(1)
   {
-    etimer_set(&et, CLOCK_SECOND);
+    etimer_set(&et, TICK_PERIOD);
     PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
     
-    static opt_message_t tick_msg;
+    // Blink Red LEDs to indicate we have a clock tick
+    leds_on( LEDS_RED );
     
-    if(stop)
-    {
-      tick_msg.key = MKEY + 1;
-    }
-    else
-    {
-	  tick_msg.key = TKEY;
-	}
-	
+    etimer_set(&et, CLOCK_SECOND / 8 );
+    PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+   
+    leds_off( LEDS_RED );
+    
+    #if DEBUG > 0
+      printf("Clock Tick\n");
+    #endif    
+    
+    tick_msg.key = TKEY + stop;	
 	tick_msg.iter = cur_cycle;
+	tick_msg.node = NODE_ID;
+	
 	for( i=0; i<DATA_LEN; i++ )
     {
       tick_msg.data[i]  = cur_data[i];
     }
     
-    //Send Iterate to random neighbor          
+    //Send Iterate to random neighbor
+    num_nbrs = get_num_nbrs();
+    rand_nbr = random_rand() % num_nbrs;
+    j = 0;
+    
+    for(i = 0; i<MAX_NBRS; i++)
+    {
+		if(!rimeaddr_cmp(&(neighbors[i]), &rimeaddr_node_addr))
+		{
+			j = j + 1;
+		}
+		if(j == rand_nbr + 1)
+		{
+			break;
+		}
+	}
+	
+	#if DEBUG > 0
+      printf("Transmitting to neighbor %d at %d.\n", j, (&(neighbors[j]))->u8[0]);
+	#endif
+	    
+    packetbuf_copyfrom( &tick_msg,sizeof(tick_msg) );	    
+	runicast_send(&runicast, &(neighbors[j]), MAX_RETRANSMISSIONS);
+	      
+	// Wait until we are done transmitting
+	while( runicast_is_transmitting(&runicast) )
+	{
+	  etimer_set(&et, CLOCK_SECOND/32);
+	  PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+	}
+	    
+    if(!stop)
+    {
+      cur_cycle = cur_cycle + 1;          
+    }
+    else
+    {
+	  // Unreliable broadcast of local estimate to the sniffer node
+      #if DEBUG > 0
+        printf("Transmitting to sniffer.\n");
+	  #endif
+    
+	  packetbuf_copyfrom( &tick_msg,sizeof(tick_msg) );
+	  broadcast_send(&broadcast);
+    }
+    
   }
   
   //SENSORS_DEACTIVATE(light_sensor);
@@ -366,6 +415,7 @@ PROCESS_THREAD(nbr_rx_process, ev, data)
   static opt_message_t msg;
   static opt_message_t out;
   static int i;
+  static int sender;
   
   #if DEBUG > 0
       printf("Got neighbor message.\n");
@@ -391,6 +441,10 @@ PROCESS_THREAD(nbr_rx_process, ev, data)
    */
   if( !stop && msg.key == TKEY && cur_cycle < MAX_ITER)
   {
+    #if DEBUG > 0
+      printf("Neighbor sent clock tick\n");
+    #endif
+    
     leds_off( LEDS_BLUE );
 	
 	//Prepare to send our (old) data back to the sender and average our data with neighbor's
@@ -401,44 +455,28 @@ PROCESS_THREAD(nbr_rx_process, ev, data)
 	}
 	
 	//static int64_t reading = 0;
-	  
-	// Check stop condition and set stop variable and change output message key if necessary
-	if(cauchy_conv(out.data) || cur_cycle == MAX_ITER)
-	{
-	  stop = 1;
-	  out.key = MKEY + 1;
-	}
-	else
-	{
-  	  out.key = MKEY;
-	}
-	  
+	
+	out.key = MKEY + stop;  
 	out.iter = cur_cycle;
+	out.node = NODE_ID;
 	  
 	// Transmit local estimate back to sender
+	for(i=0; i<MAX_NBRS; i++)
+	{
+		if(((&(neighbors[i]))->u8[0]) == msg.node)
+		{
+			sender = i;
+			break;
+		}
+	}
 		
     #if DEBUG > 0
-      printf("Transmitting to neighbor %d at %d.\n", i, (&(neighbors[i]))->u8[0]);
+      printf("Transmitting to neighbor %d at %d.\n", sender, (&(neighbors[sender]))->u8[0]);
 	#endif
 	    
     packetbuf_copyfrom( &out,sizeof(out) );	    
-	runicast_send(&runicast, &(neighbors[i]), MAX_RETRANSMISSIONS);
+	runicast_send(&runicast, &(neighbors[sender]), MAX_RETRANSMISSIONS);
 	      
-	// Wait until we are done transmitting
-	while( runicast_is_transmitting(&runicast) )
-	{
-	  etimer_set(&et, CLOCK_SECOND/32);
-	  PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
-	}	    
-		  
-	#if DEBUG > 0
-      printf("Transmitting to sniffer.\n");
-	#endif
-	  
-	// Unreliable broadcast of local estimate to the sniffer node
-    packetbuf_copyfrom( &out,sizeof(out) );
-	broadcast_send(&broadcast);
-	
 	// Wait until we are done transmitting
 	while( runicast_is_transmitting(&runicast) )
 	{
@@ -448,20 +486,125 @@ PROCESS_THREAD(nbr_rx_process, ev, data)
 	
 	// Update local estimate with local gradient information
 	//reading = (((int64_t)light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC)) << PREC_SHIFT) - MODEL_C;
-	
 	grad_iterate( cur_data, out.data);
+	
+	// Check stop condition and set stop variable and change output message key if necessary
+	if(cauchy_conv(out.data) || cur_cycle == MAX_ITER)
+	{
+	  stop = 1;
+	}
+	
+	out.key = MKEY + stop;
+	
+	for(i=0; i<DATA_LEN; i++)
+    {
+	  cur_data[i] = (out.data)[i];
+    }  
+	 
+    // Unreliable broadcast of local estimate to the sniffer node
+    #if DEBUG > 0
+      printf("Transmitting to sniffer.\n");
+	#endif
+    
+	packetbuf_copyfrom( &out,sizeof(out) );
+	broadcast_send(&broadcast);	
+
+	cur_cycle = cur_cycle + 1;
+  }
+  
+  else if( !stop && msg.key == MKEY && cur_cycle < MAX_ITER)
+  {
+	 #if DEBUG > 0
+	   printf("Clock tick response received.\n");
+	 #endif
+	 
+	 leds_off( LEDS_BLUE );
+	 	 
+	// Average our data with neighbor's
+    for(i=0; i<DATA_LEN; i++)
+    {
+		cur_data[i] = (cur_data[i] + msg.data[i])/2;
+		(out.data)[i] = cur_data[i];
+	}
+			  
+	out.iter = cur_cycle;
+	out.node = NODE_ID;
+	
+	// Update local estimate with local gradient information
+    //reading = (((int64_t)light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC)) << PREC_SHIFT) - MODEL_C;
+	grad_iterate( cur_data, out.data);
+
+    // Check stop condition and set stop variable and change output message key if necessary
+	if(cauchy_conv(cur_data) || cur_cycle == MAX_ITER)
+	{
+	  stop = 1;
+	}
+	
+    out.key = MKEY + stop;
+
 	
 	for(i=0; i<DATA_LEN; i++)
     {
 	  cur_data[i] = (out.data)[i];
     }
-
+    
+    // Unreliable broadcast of local estimate to the sniffer node
+    #if DEBUG > 0
+      printf("Transmitting to sniffer.\n");
+	#endif
+    
+	packetbuf_copyfrom( &out,sizeof(out) );
+	broadcast_send(&broadcast);
+	
+	// Wait until we are done transmitting
+	while( runicast_is_transmitting(&runicast) )
+	{
+	  etimer_set(&et, CLOCK_SECOND/32);
+	  PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+	}    	  
   }
-  else if((stop || msg.key == MKEY + 1) )
+  
+  else if (stop && (msg.key == TKEY))
+  {
+	out.iter = cur_cycle;
+	out.node = NODE_ID;
+    out.key = MKEY + stop;
+    
+    for(i=0; i<DATA_LEN; i++)
+    {
+		(out.data)[i] = cur_data[i];
+	}
+	
+	// Transmit local estimate back to sender
+	for(i=0; i<MAX_NBRS; i++)
+	{
+		if(((&(neighbors[i]))->u8[0]) == msg.node)
+		{
+			sender = i;
+			break;
+		}
+	}
+		
+    #if DEBUG > 0
+      printf("Transmitting to neighbor %d at %d.\n", sender, (&(neighbors[sender]))->u8[0]);
+	#endif
+	    
+    packetbuf_copyfrom( &out,sizeof(out) );	    
+	runicast_send(&runicast, &(neighbors[sender]), MAX_RETRANSMISSIONS);
+	      
+	// Wait until we are done transmitting
+	while( runicast_is_transmitting(&runicast) )
+	{
+	  etimer_set(&et, CLOCK_SECOND/32);
+	  PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+	}  
+  }
+  
+  else if(stop || (msg.key == MKEY + 1) || (msg.key == TKEY + 1))
   {
 	  stop = 1;
 	  leds_on( LEDS_BLUE );
-  }
+  }  
   
   #if DEBUG > 0
     printf("Data Received: \n");
@@ -495,6 +638,12 @@ int64_t get_col()
 {
   int64_t c[] = ID2COL;
   return ((c[ NODE_ID - START_ID ]) * SPACING) << PREC_SHIFT;
+}
+
+uint8_t get_num_nbrs()
+{
+	uint8_t n[] = ID2NUM_NEIGHBORS;
+	return( n[NODE_ID - START_ID]);
 }
 
 /*

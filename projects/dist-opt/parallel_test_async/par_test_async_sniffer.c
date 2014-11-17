@@ -22,18 +22,16 @@ broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)
   packetbuf_copyto(&msg);
   
   // Don't print clock messages
-  if(msg.key != CKEY)
-  {  
-    printf("%u %u %u", msg.key, msg.iter, from->u8[0]);
+  printf("%u %u %u", msg.key, msg.iter, from->u8[0]);
   
-    for( i=0; i<DATA_LEN; i++ )
-    {
-      printf(" %"PRIi64, msg.data[i]);
-    }
-  
-    printf("\n");
+  for( i=0; i<DATA_LEN; i++ )
+  {
+    printf(" %"PRIi64, msg.data[i]);
   }
+  
+  printf("\n");
 }
+
 
 static const struct broadcast_callbacks broadcast_call = {broadcast_recv};
 
