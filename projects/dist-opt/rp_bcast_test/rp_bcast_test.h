@@ -10,7 +10,7 @@
 //Rime constants
 #define COMM_CHANNEL 100
 #define SNIFFER_CHANNEL 200
-#define MAX_RETRANSMISSIONS 4
+#define MAX_RETRANSMISSIONS 1
 #define NUM_HISTORY_ENTRIES 1
 
 typedef struct opt_message_s
