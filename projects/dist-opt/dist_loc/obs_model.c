@@ -38,7 +38,7 @@ PROCESS_THREAD(main_process, ev, data)
 	PROCESS_EXITHANDLER(broadcast_close(&broadcast));
 	PROCESS_BEGIN();
 	 
-	broadcast_open(&broadcast, COMM_CHANNEL, &broadcast_call);
+	broadcast_open(&broadcast, SNIFFER_CHANNEL, &broadcast_call);
 	SENSORS_ACTIVATE(button_sensor);
 	
 	// Don't start data collection until user button is pressed

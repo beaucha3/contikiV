@@ -4,6 +4,6 @@
 #include <stdint.h>
 
 #define MKEY 1156   // Chosen by fair die rolls, guaranteed to be random
-#define COMM_CHANNEL 100
+#define SNIFFER_CHANNEL 200
 
 #endif /* _OBS_MODEL_H_ */
