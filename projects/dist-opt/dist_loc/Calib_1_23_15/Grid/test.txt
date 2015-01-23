@@ -1,0 +1,2 @@
+using saved target 'sky'
+/home/user/contikiV/tools/sky/serialdump-linux -b115200 /dev/ttyUSB0
