@@ -1,5 +1,5 @@
 /*
- * rp_bcast_test_ver2.c
+ * rp_bcast_test.c
  * 
  */
  
@@ -19,7 +19,7 @@
  * Actual step size is STEP/2^PREC_SHIFT, this is to keep all computations as 
  * integers
  */
-#define TICK_PERIOD CLOCK_SECOND*4
+#define TICK_PERIOD CLOCK_SECOND*8
 #define STEP 8ll
 #define PREC_SHIFT 9
 #define START_VAL { 0 }
@@ -36,8 +36,8 @@
 
 // Special Node Addresses and Topology Constants
 
-#define MAX_ROWS 1      // Max row number in sensor grid (0 to MAX_ROWS)
-#define MAX_COLS 1      // Max column number in sensor grid (0 to MAX_COLS)
+#define MAX_ROWS 1      // Max row number in sensor grid (0 - MAX_ROWS)
+#define MAX_COLS 1      // Max column number in sensor grid (0 - MAX_COLS)
 #define START_ID  10    // ID of first node in chain
 #define SNIFFER_NODE_0 25
 #define SNIFFER_NODE_1 0
@@ -48,7 +48,7 @@
 #define RWIN 16ll          // Number of readings to average light sensor reading over
 
 //Debug printouts
-#define DEBUG 0
+#define DEBUG 1
 
 
 /*
@@ -133,19 +133,11 @@ PROCESS(main_process, "main");
 PROCESS(nbr_rx_process, "nbr_rx_proc");
 AUTOSTART_PROCESSES(&main_process);
 
-static struct broadcast_conn broadcast_node; 
-static void broadcast_recv_node(struct broadcast_conn *c, const rimeaddr_t *from)
-{
-  if(is_neighbor(from))
-  {
-    process_start(&nbr_rx_process, (char*)(from));
-  }	
-}
-static const struct broadcast_callbacks broadcast_call_node = {broadcast_recv_node};
+static struct broadcast_conn broadcast; 
+static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from){}
 
-static struct broadcast_conn broadcast_sniffer;
-static void broadcast_recv_sniffer(struct broadcast_conn *c, const rimeaddr_t *from){}
-static const struct broadcast_callbacks broadcast_call_sniffer = {broadcast_recv_sniffer};
+static const struct broadcast_callbacks broadcast_call = {broadcast_recv};
+static struct runicast_conn runicast;
 
 /*
  * Sub-function
@@ -157,16 +149,109 @@ static void grad_iterate(int64_t* iterate, int64_t* result)
   *result = ( *iterate - ((STEP * ( (1 << (NORM_ID + 1))*(*iterate) - (NORM_ID << (PREC_SHIFT + 1)))) >> PREC_SHIFT) );
 }
 
-void comms_close(struct broadcast_conn *c, struct broadcast_conn *b)
+
+/* OPTIONAL: Sender history.
+ * Detects duplicate callbacks at receiving nodes.
+ * Duplicates appear when ack messages are lost. */
+struct history_entry
 {
-  broadcast_close(c);
+  struct history_entry *next;
+  rimeaddr_t addr;
+  uint8_t seq;
+};
+LIST(history_table);
+MEMB(history_mem, struct history_entry, NUM_HISTORY_ENTRIES);
+
+static void recv_runicast(struct runicast_conn *c, const rimeaddr_t *from, uint8_t seqno)
+{
+  #if DEBUG > 0
+    printf("runicast message received from %d.%d, seqno %d\n",
+        from->u8[0], from->u8[1], seqno);
+  #endif
+  
+  /* Sender history */
+  struct history_entry *e = NULL;
+  
+  for(e = list_head(history_table); e != NULL; e = e->next) 
+  {
+    if(rimeaddr_cmp(&e->addr, from)) 
+    {
+      break;
+    }
+  }
+  
+  if(e == NULL) 
+  {
+    /* Create new history entry */
+    e = memb_alloc(&history_mem);
+    
+    if(e == NULL)
+    {
+      e = list_chop(history_table); /* Remove oldest at full history */
+    }
+    
+    rimeaddr_copy(&e->addr, from);
+    e->seq = seqno;
+    list_push(history_table, e);
+  } 
+  else 
+  {
+    /* Detect duplicate callback */
+    if(e->seq == seqno)
+    {
+      #if DEBUG > 0
+        printf("runicast message received from %d.%d, seqno %d (DUPLICATE)\n",
+		  from->u8[0], from->u8[1], seqno);
+      #endif 
+
+
+      return;
+    }
+    /* Update existing history entry */
+    e->seq = seqno;
+  }
+  
+  if(is_neighbor(from))
+  {
+  	  process_start(&nbr_rx_process, (char*)(from));
+  }
+}
+
+static void sent_runicast(struct runicast_conn *c, const rimeaddr_t *to, uint8_t retransmissions)
+{
+   #if DEBUG > 0
+     printf("runicast message sent to %d.%d, retransmissions %d\n",
+          to->u8[0], to->u8[1], retransmissions);
+   #endif
+   
+}
+
+static void timedout_runicast(struct runicast_conn *c, const rimeaddr_t *to, uint8_t retransmissions)
+{
+  #if DEBUG > 0
+     printf("runicast message timed out when sending to %d , %d, retransmissions %d\n",
+         to->u8[0], to->u8[1], retransmissions);
+   #endif  
+}
+
+//static const struct broadcast_callbacks broadcast_call = {broadcast_recv};
+static const struct runicast_callbacks runicast_callbacks = 
+{ 
+  recv_runicast,
+  sent_runicast,
+  timedout_runicast
+};
+
+void comms_close(struct runicast_conn *c, struct broadcast_conn *b)
+{
+  runicast_close(c);
   broadcast_close(b);
 }
 
 /*-------------------------------------------------------------------*/
 PROCESS_THREAD(main_process, ev, data)
 {
-  PROCESS_EXITHANDLER(comms_close(&broadcast_sniffer, &broadcast_node);)
+  PROCESS_EXITHANDLER(comms_close(&runicast, &broadcast);)
   PROCESS_BEGIN();
   
   static struct etimer et;
@@ -190,8 +275,8 @@ PROCESS_THREAD(main_process, ev, data)
   etimer_set(&et, CLOCK_SECOND*2);
   PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
   
-  broadcast_open(&broadcast_sniffer, SNIFFER_CHANNEL, &broadcast_call_sniffer);
-  broadcast_open(&broadcast_node, COMM_CHANNEL, &broadcast_call_node);
+  broadcast_open(&broadcast, SNIFFER_CHANNEL, &broadcast_call);
+  runicast_open(&runicast, COMM_CHANNEL, &runicast_callbacks);
   
   #if CALIB_C > 0
     /*
@@ -243,21 +328,34 @@ PROCESS_THREAD(main_process, ev, data)
       tick_msg.data[i]  = cur_data[i];
     }
     
-    // Broadcast iterate to all neighbors in sequence
-    #if DEBUG > 0
-      printf("Broadcasting to neighbors.\n");
-	#endif
+    // Send iterate to all neighbors in sequence
+    for(i = 0; i<MAX_NBRS; i++)
+    {
+		if(!rimeaddr_cmp(&(neighbors[i]), &rimeaddr_node_addr))
+		{
+			#if DEBUG > 0
+		      printf("Transmitting to neighbor %d at %d.\n", i, (&(neighbors[i]))->u8[0]);
+			#endif
+			    
+		    packetbuf_copyfrom( &tick_msg,sizeof(tick_msg) );	    
+			runicast_send(&runicast, &(neighbors[i]), MAX_RETRANSMISSIONS);
+			      
+			// Wait until we are done transmitting
+			while( runicast_is_transmitting(&runicast) )
+			{
+			  etimer_set(&et, CLOCK_SECOND/32);
+			  PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+			}
+		}
+	}
 	
-    packetbuf_copyfrom( &tick_msg,sizeof(tick_msg) );	    
-	broadcast_send(&broadcast_node);
-
 	// Unreliable broadcast of local estimate to the sniffer node
     #if DEBUG > 0
-      printf("Broadcasting to sniffer.\n");
+      printf("Transmitting to sniffer.\n");
 	#endif
     
 	packetbuf_copyfrom( &tick_msg,sizeof(tick_msg) );
-	broadcast_send(&broadcast_sniffer);
+	broadcast_send(&broadcast);
 	
 	min_msgs = 1000;
 	for(i=0; i<MAX_NBRS; i++)
