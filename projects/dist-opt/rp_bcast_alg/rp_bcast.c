@@ -19,18 +19,18 @@
  * Actual step size is STEP/2^PREC_SHIFT, this is to keep all computations as 
  * integers
  */
-#define TICK_PERIOD CLOCK_SECOND*2
-#define STEP 64ll
+#define TICK_PERIOD CLOCK_SECOND*4
+#define STEP 32ll
 #define PREC_SHIFT 9
 #define START_VAL {30ll << PREC_SHIFT, 30ll << PREC_SHIFT, 10ll << PREC_SHIFT}
-#define EPSILON 32ll      // Epsilon for stopping condition actual epsilon is this value divided by 2^PREC_SHIFT
+#define EPSILON 16ll      // Epsilon for stopping condition actual epsilon is this value divided by 2^PREC_SHIFT
 #define CAUCHY_NUM 5    // Number of history elements for Cauchy test
 
 // Model constants. Observation model follows (A/(r^2 + B)) + C
 // g_model is the denominator, f_model is the entire expression
-#define CALIB_C 0     // Set to non-zero to calibrate on reset
-#define MODEL_A (48000ll << PREC_SHIFT)
-#define MODEL_B (48ll << PREC_SHIFT)
+#define CALIB_C 1     // Set to non-zero to calibrate on reset
+#define MODEL_A (47880ll << PREC_SHIFT)
+#define MODEL_B (76ll << PREC_SHIFT)
 #define MODEL_C model_c
 #define SPACING 30ll      // Centimeters of spacing
 
@@ -228,17 +228,9 @@ PROCESS_THREAD(main_process, ev, data)
   num_nbrs = get_num_nbrs();
   
   SENSORS_ACTIVATE(light_sensor);
-  SENSORS_ACTIVATE(button_sensor);
-    
-  // Don't start data collection until user button is pressed
-  PROCESS_WAIT_EVENT_UNTIL(ev == sensors_event 
-                          && data == &button_sensor);
   
-  etimer_set(&et, CLOCK_SECOND*5);
-  PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
-  
-  broadcast_open(&broadcast_sniffer, SNIFFER_CHANNEL, &broadcast_call_sniffer);
-  broadcast_open(&broadcast_node, COMM_CHANNEL, &broadcast_call_node);
+  etimer_set(&et, CLOCK_SECOND*2);
+  PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));  
   
   #if CALIB_C > 0
     /*
@@ -262,6 +254,18 @@ PROCESS_THREAD(main_process, ev, data)
     #endif
   
   #endif
+  
+  // Don't start algorithm until user button is pressed
+  SENSORS_ACTIVATE(button_sensor);    
+  
+  PROCESS_WAIT_EVENT_UNTIL(ev == sensors_event 
+                          && data == &button_sensor);
+  
+  etimer_set(&et, CLOCK_SECOND*5);
+  PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+  
+  broadcast_open(&broadcast_sniffer, SNIFFER_CHANNEL, &broadcast_call_sniffer);
+  broadcast_open(&broadcast_node, COMM_CHANNEL, &broadcast_call_node);
 
   while(1)
   {
