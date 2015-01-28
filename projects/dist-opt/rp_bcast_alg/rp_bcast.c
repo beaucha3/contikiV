@@ -382,7 +382,10 @@ PROCESS_THREAD(main_process, ev, data)
 	  leds_on( LEDS_BLUE );
 	}
 	
-	cur_cycle = cur_cycle + 1;      
+	if(!stop)
+	{
+	  cur_cycle = cur_cycle + 1;      
+	}
   }
   
   //SENSORS_DEACTIVATE(light_sensor);
