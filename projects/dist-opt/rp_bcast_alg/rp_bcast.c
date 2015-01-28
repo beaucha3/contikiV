@@ -1,5 +1,5 @@
 /*
- * rp_bcast_test_ver2.c
+ * rp_bcast.c
  * 
  */
  
@@ -19,18 +19,18 @@
  * Actual step size is STEP/2^PREC_SHIFT, this is to keep all computations as 
  * integers
  */
-#define TICK_PERIOD CLOCK_SECOND*4
-#define STEP 32ll
+#define TICK_PERIOD CLOCK_SECOND*2
+#define STEP 8ll
 #define PREC_SHIFT 9
 #define START_VAL {30ll << PREC_SHIFT, 30ll << PREC_SHIFT, 10ll << PREC_SHIFT}
-#define EPSILON 16ll      // Epsilon for stopping condition actual epsilon is this value divided by 2^PREC_SHIFT
+#define EPSILON 128ll      // Epsilon for stopping condition actual epsilon is this value divided by 2^PREC_SHIFT
 #define CAUCHY_NUM 5    // Number of history elements for Cauchy test
 
 // Model constants. Observation model follows (A/(r^2 + B)) + C
 // g_model is the denominator, f_model is the entire expression
 #define CALIB_C 1     // Set to non-zero to calibrate on reset
-#define MODEL_A (47880ll << PREC_SHIFT)
-#define MODEL_B (76ll << PREC_SHIFT)
+#define MODEL_A (48000ll << PREC_SHIFT)
+#define MODEL_B (48ll << PREC_SHIFT)
 #define MODEL_C model_c
 #define SPACING 30ll      // Centimeters of spacing
 
@@ -337,7 +337,7 @@ PROCESS_THREAD(main_process, ev, data)
 			  for(j=0; j<DATA_LEN; j++)
 			  {
 				  // When aggregating, average over number of neighbor updates for each neighbor's value
-				  cur_data[j] = cur_data[j] + (neighbor_vals[i][j]/neighbor_msgs[i]);
+				  cur_data[j] = cur_data[j] + neighbor_vals[i][j];
 			  }
 		  }
 	  }
@@ -445,7 +445,7 @@ PROCESS_THREAD(nbr_rx_process, ev, data)
 			
 			for(j=0; j<DATA_LEN; j++)
 			{
-				neighbor_vals[i][j] = neighbor_vals[i][j] + msg.data[j];
+				neighbor_vals[i][j] = msg.data[j];
 			}
 		}
 	}	
