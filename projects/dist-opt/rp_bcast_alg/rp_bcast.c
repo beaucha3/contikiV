@@ -28,7 +28,7 @@
 
 // Model constants. Observation model follows (A/(r^2 + B)) + C
 // g_model is the denominator, f_model is the entire expression
-#define CALIB_C 1     // Set to non-zero to calibrate on reset
+#define CALIB_C 0    // Set to non-zero to calibrate on reset
 #define MODEL_A (48000ll << PREC_SHIFT)
 #define MODEL_B (48ll << PREC_SHIFT)
 #define MODEL_C model_c
@@ -80,7 +80,9 @@
 static int64_t cur_data[DATA_LEN] = START_VAL;
 static int16_t cur_cycle = 0;
 static uint8_t stop = 0;
-static int64_t model_c = 85ll << PREC_SHIFT;
+
+static int64_t baseline[NUM_NODES] = {87ll, 71ll, 88ll, 70ll, 95ll, 84ll, 73ll, 93ll, 85ll};
+static int64_t model_c;
 
 //Variables for bounding box conditions
 static int64_t max_col = (90ll << PREC_SHIFT); 
@@ -230,7 +232,9 @@ PROCESS_THREAD(main_process, ev, data)
   SENSORS_ACTIVATE(light_sensor);
   
   etimer_set(&et, CLOCK_SECOND*2);
-  PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));  
+  PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+  
+  model_c = = (baseline[NORM_ID]) << PREC_SHIFT;  
   
   #if CALIB_C > 0
     /*
@@ -387,7 +391,7 @@ PROCESS_THREAD(main_process, ev, data)
 	}
   }
   
-  //SENSORS_DEACTIVATE(light_sensor);
+  SENSORS_DEACTIVATE(light_sensor);
   PROCESS_END();
 }
 
