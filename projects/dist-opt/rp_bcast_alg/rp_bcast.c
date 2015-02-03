@@ -261,7 +261,7 @@ PROCESS_THREAD(main_process, ev, data)
   PROCESS_WAIT_EVENT_UNTIL(ev == sensors_event 
                           && data == &button_sensor);
   
-  etimer_set(&et, CLOCK_SECOND*5);
+  etimer_set(&et, CLOCK_SECOND*10);
   PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
   
   broadcast_open(&broadcast_sniffer, SNIFFER_CHANNEL, &broadcast_call_sniffer);
@@ -294,7 +294,7 @@ PROCESS_THREAD(main_process, ev, data)
     }
     
 
-    //Unreliably broadcast iterate to all neighbors in sequence
+    //Unreliably broadcast iterate to all neighbors
     #if DEBUG > 0
       printf("Broadcasting to neighbors.\n");
 	#endif
@@ -336,7 +336,6 @@ PROCESS_THREAD(main_process, ev, data)
 		  {
 			  for(j=0; j<DATA_LEN; j++)
 			  {
-				  // When aggregating, average over number of neighbor updates for each neighbor's value
 				  cur_data[j] = cur_data[j] + neighbor_vals[i][j];
 			  }
 		  }
