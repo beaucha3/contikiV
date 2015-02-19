@@ -16,6 +16,7 @@ typedef struct opt_message_s
   uint16_t key;         // Unique header
   uint16_t iter;         // Number of nodes the iterate has passed through
   int64_t data[DATA_LEN];  // Current data step of optimization algorithm
+  int64_t sensor_val; // Most recent sensor value reading
   uint16_t node;
 }
 opt_message_t;

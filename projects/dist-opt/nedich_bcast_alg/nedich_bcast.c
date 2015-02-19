@@ -22,9 +22,10 @@
 #define TICK_PERIOD CLOCK_SECOND*2
 #define STEP 8ll
 #define PREC_SHIFT 9
-#define START_VAL {30ll << PREC_SHIFT, 30ll << PREC_SHIFT, 15ll << PREC_SHIFT}
+#define START_VAL {30ll << PREC_SHIFT, 30ll << PREC_SHIFT, 13ll << PREC_SHIFT}
 #define EPSILON 128ll      // Epsilon for stopping condition actual epsilon is this value divided by 2^PREC_SHIFT
 #define CAUCHY_NUM 5    // Number of history elements for Cauchy test
+#define ITERATE_HEIGHT 0 //Whether or not to optimize over the height dimension also
 
 // Model constants. Observation model follows (A/(r^2 + B)) + C
 // g_model is the denominator, f_model is the entire expression
@@ -38,6 +39,8 @@
 
 #define MAX_ROWS 2      // Max row number in sensor grid (0 to MAX_ROWS)
 #define MAX_COLS 2      // Max column number in sensor grid (0 to MAX_COLS)
+#define USE_ALL_MSGS 0  // Ignore is_neighbor() check, accept any braodcast when iterating
+
 #define START_ID  10    // ID of first node in chain
 #define SNIFFER_NODE_0 25
 #define SNIFFER_NODE_1 0
@@ -78,6 +81,7 @@
  * nominal model_c in case calibration is disabled, and stop condition
  */
 static int64_t cur_data[DATA_LEN] = START_VAL;
+static int64_t cur_sensor_reading = 1;
 static int16_t cur_cycle = 0;
 static uint8_t stop = 0;
 
@@ -137,7 +141,7 @@ AUTOSTART_PROCESSES(&main_process);
 static struct broadcast_conn broadcast_node; 
 static void broadcast_recv_node(struct broadcast_conn *c, const rimeaddr_t *from)
 {
-  if(is_neighbor(from))
+  if(is_neighbor(from) || USE_ALL_MSGS)
   {
     process_start(&nbr_rx_process, (char*)(from));
   }	
@@ -167,6 +171,12 @@ static void grad_iterate(int64_t* iterate, int64_t* result, int len, int64_t rea
      * ( MODEL_A * (reading - f) * (iterate[i] - node_loc[i]) ) needs at 
      * most 58 bits, and after the division, is at least 4550.
      */
+     
+    if(!ITERATE_HEIGHT && i == DATA_LEN-1)
+    {
+		continue;
+	}
+	 
     result[i] = iterate[i] - ( (4ll * STEP * ( ((MODEL_A * (reading - f) * (iterate[i] - node_loc[i])) / gsq) >> PREC_SHIFT)) >> PREC_SHIFT);
   }
   
@@ -194,14 +204,17 @@ static void grad_iterate(int64_t* iterate, int64_t* result, int len, int64_t rea
      result[1] = min_row;
    }
    
-   if(result[2] > max_height)
+   if(ITERATE_HEIGHT)
    {
-	   result[2] = max_height;
-   }
+     if(result[2] > max_height)
+     {
+	     result[2] = max_height;
+     }
 	  
-   if(result[2] < min_height)
-   {
-	   result[2] = min_height;
+     if(result[2] < min_height)
+     {
+	     result[2] = min_height;
+     }
    } 
   
 }
@@ -230,7 +243,10 @@ PROCESS_THREAD(main_process, ev, data)
   etimer_set(&et, CLOCK_SECOND*2);
   PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et)); 
   
-  model_c = (baseline[NORM_ID]) << PREC_SHIFT; 
+  model_c = (baseline[NORM_ID - 1]) << PREC_SHIFT; 
+  #if DEBUG > 0
+	printf("Calibration Harcoded Value C = %"PRIi64"\n", model_c);
+  #endif 
   
   #if CALIB_C > 0
     /*
@@ -255,30 +271,30 @@ PROCESS_THREAD(main_process, ev, data)
   
   #endif
   
+  // Turn on red LEDs to indicate setup is complete
+  leds_on(LEDS_RED);
+  
+  
   // Don't start algorithm until user button is pressed
   SENSORS_ACTIVATE(button_sensor);    
   
   PROCESS_WAIT_EVENT_UNTIL(ev == sensors_event 
                           && data == &button_sensor);
   
-  etimer_set(&et, CLOCK_SECOND*10);
+  etimer_set(&et, CLOCK_SECOND*5);
   PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
   
+  //Open communication channels  
   broadcast_open(&broadcast_sniffer, SNIFFER_CHANNEL, &broadcast_call_sniffer);
   broadcast_open(&broadcast_node, COMM_CHANNEL, &broadcast_call_node);
+  
+  // Get current reading for initial broadcast
+  cur_sensor_reading = (((int64_t)light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC)) << PREC_SHIFT) - MODEL_C;
 
   while(1)
   {
     etimer_set(&et, TICK_PERIOD);
     PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
-    
-    // Blink Red LEDs to indicate we have a clock tick
-    leds_on( LEDS_RED );
-    
-    etimer_set(&et, CLOCK_SECOND / 8 );
-    PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
-   
-    leds_off( LEDS_RED );
     
     #if DEBUG > 0
       printf("Clock Tick\n");
@@ -287,12 +303,12 @@ PROCESS_THREAD(main_process, ev, data)
     tick_msg.key = TKEY + stop;	
 	tick_msg.iter = cur_cycle;
 	tick_msg.node = NODE_ID;
+	tick_msg.sensor_val = cur_sensor_reading;
 	
 	for( i=0; i<DATA_LEN; i++ )
     {
       tick_msg.data[i]  = cur_data[i];
-    }
-    
+    }    
 
     //Unreliably broadcast iterate to all neighbors in sequence
     #if DEBUG > 0
@@ -344,6 +360,7 @@ PROCESS_THREAD(nbr_rx_process, ev, data)
   static opt_message_t msg;
   static int i;
   static int64_t reading = 0;
+  static int64_t weight = 0;
   
   #if DEBUG > 0
       printf("Got neighbor message.\n");
@@ -375,10 +392,15 @@ PROCESS_THREAD(nbr_rx_process, ev, data)
     
     leds_off( LEDS_BLUE );
     
+    // Get neighbor's reading from message, compare with our own and compute
+    // relative weight
+    weight = (msg.sensor_val) / (msg.sensor_val + cur_sensor_reading);
+    
+    
     //Average with neighbor data
     for( i=0; i<DATA_LEN; i++)
     {
-		cur_data[i] = (cur_data[i] + msg.data[i])/2;
+		cur_data[i] = (cur_data[i] * ((1 << PREC_SHIFT) - weight)  + msg.data[i] * weight) >> PREC_SHIFT;
 	}
     
     // Update with gradient and re-copy to current data
