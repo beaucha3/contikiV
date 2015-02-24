@@ -19,7 +19,7 @@
  * Actual step size is STEP/2^PREC_SHIFT, this is to keep all computations as 
  * integers
  */
-#define TICK_PERIOD CLOCK_SECOND*2
+#define TICK_PERIOD CLOCK_SECOND*4
 #define STEP 8ll
 #define PREC_SHIFT 9
 #define START_VAL {30ll << PREC_SHIFT, 30ll << PREC_SHIFT, 13ll << PREC_SHIFT}
@@ -394,13 +394,14 @@ PROCESS_THREAD(nbr_rx_process, ev, data)
     
     // Get neighbor's reading from message, compare with our own and compute
     // relative weight
-    weight = (msg.sensor_val) / (msg.sensor_val + cur_sensor_reading);
+    //weight = (msg.sensor_val << PREC_SHIFT) / (msg.sensor_val + cur_sensor_reading);
     
     
     //Average with neighbor data
     for( i=0; i<DATA_LEN; i++)
     {
-		cur_data[i] = (cur_data[i] * ((1 << PREC_SHIFT) - weight)  + msg.data[i] * weight) >> PREC_SHIFT;
+		cur_data[i] = (cur_data[i] + msg.data[i])/ 2;		
+		//cur_data[i] = ((cur_data[i] * ((1 << PREC_SHIFT) - weight))  + (msg.data[i] * weight)) >> PREC_SHIFT;
 	}
     
     // Update with gradient and re-copy to current data
