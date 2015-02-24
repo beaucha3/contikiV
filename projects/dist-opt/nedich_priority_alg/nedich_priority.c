@@ -12,7 +12,7 @@
 #include "dev/button-sensor.h"
 #include "lib/memb.h"
 
-#include "nedich_bcast.h"
+#include "nedich_priority.h"
 
 /* 
  * Using fixed step size for now.
@@ -291,10 +291,7 @@ PROCESS_THREAD(main_process, ev, data)
   
   //Open communication channels  
   broadcast_open(&broadcast_sniffer, SNIFFER_CHANNEL, &broadcast_call_sniffer);
-  broadcast_open(&broadcast_node, COMM_CHANNEL, &broadcast_call_node);
-  
-  // Get current reading for initial broadcast
-  cur_sensor_reading = (((int64_t)light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC)) << PREC_SHIFT) - MODEL_C;
+  broadcast_open(&broadcast_node, COMM_CHANNEL, &broadcast_call_node); 
   
   while(1)
   {
@@ -303,18 +300,27 @@ PROCESS_THREAD(main_process, ev, data)
     
     #if DEBUG > 0
       printf("Clock Tick\n");
-    #endif    
+    #endif
     
+    // Get current reading
+    cur_sensor_reading = (((int64_t)light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC)) << PREC_SHIFT) - MODEL_C;
+    
+    // Nodes with too low of a sensor reading do not participate in gradient descent or averaging
     if(cur_sensor_reading > PARTICIPATE_THRES)
 	{	
 		participate = 1;
 		hops = 0;
 	}
+	else
+	{
+		participate = 0;
+	}
     
     tick_msg.key = TKEY + stop;	
 	tick_msg.iter = cur_cycle;
 	tick_msg.node = NODE_ID;
-	tick_msg.sensor_val = cur_sensor_reading;
+	tick_msg.part = participate;
+	tick_msg.hop_number = hops;
 	
 	for( i=0; i<DATA_LEN; i++ )
     {
@@ -371,8 +377,8 @@ PROCESS_THREAD(nbr_rx_process, ev, data)
   static opt_message_t msg;
   static int i;
   static int64_t reading = 0;
-  static int64_t weight = 0;
-  
+  //static int64_t weight = 0;
+    
   #if DEBUG > 0
       printf("Got neighbor message.\n");
   #endif
@@ -402,22 +408,42 @@ PROCESS_THREAD(nbr_rx_process, ev, data)
     #endif
     
     leds_off( LEDS_BLUE );
-    
-    // Get neighbor's reading from message, compare with our own and compute
-    // relative weight
-    //weight = (msg.sensor_val << PREC_SHIFT) / (msg.sensor_val + cur_sensor_reading);
-    
-    
-    //Average with neighbor data
-    for( i=0; i<DATA_LEN; i++)
-    {
-		cur_data[i] = (cur_data[i] + msg.data[i])/ 2;		
-		//cur_data[i] = ((cur_data[i] * ((1 << PREC_SHIFT) - weight))  + (msg.data[i] * weight)) >> PREC_SHIFT;
+        
+    // If we are participating and so too is the sender, proceed with Nedich Bcast Algorithm
+    if(participate && msg.part)
+    {       
+	    //Average with neighbor data
+	    for( i=0; i<DATA_LEN; i++)
+	    {
+			cur_data[i] = (cur_data[i] + msg.data[i])/ 2;		
+		}
+	    
+	    // Update with gradient and re-copy to current data
+	    reading = (((int64_t)light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC)) << PREC_SHIFT) - MODEL_C;
+	    grad_iterate( cur_data, cur_data, DATA_LEN, reading);
+    }
+    // If we aren't participating but the sender is, just take their value and update hops
+    else if(!participate && msg.part) 
+	{	
+		for( i=0; i<DATA_LEN; i++)
+	    {
+			cur_data[i] = msg.data[i];		
+		}
+		
+		hops = 1;
 	}
-    
-    // Update with gradient and re-copy to current data
-    reading = (((int64_t)light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC)) << PREC_SHIFT) - MODEL_C;
-    grad_iterate( cur_data, cur_data, DATA_LEN, reading);    
+	else if(!participate && !msg.part)
+	{
+		if(msg.hop_number < hops)
+		{
+			for( i=0; i<DATA_LEN; i++)
+			{
+				cur_data[i] = msg.data[i];		
+			}
+		}
+		
+		hops = msg.hop_number + 1;
+	}
   }
   
   else if(stop || (msg.key == TKEY + 1))
