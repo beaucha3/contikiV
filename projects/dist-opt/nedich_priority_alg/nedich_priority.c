@@ -26,7 +26,7 @@
 #define EPSILON 128ll      // Epsilon for stopping condition actual epsilon is this value divided by 2^PREC_SHIFT
 #define CAUCHY_NUM 5    // Number of history elements for Cauchy test
 #define ITERATE_HEIGHT 0 //Whether or not to optimize over the height dimension also
-#define PARTICIPATE_THRES 25 //Determines participation of node in optimization
+#define PARTICIPATE_THRES 25ll  << PREC_SHIFT //Determines participation of node in optimization
 
 // Model constants. Observation model follows (A/(r^2 + B)) + C
 // g_model is the denominator, f_model is the entire expression

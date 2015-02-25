@@ -14,8 +14,8 @@
 typedef struct opt_message_s
 {
   uint16_t key;         // Unique header
-  uint16_t iter;         // Number of nodes the iterate has passed through
-  int64_t data[DATA_LEN];  // Current data step of optimization algorithm
+  uint16_t iter;         // Number of cycles the node has completed
+  int64_t data[DATA_LEN];  // Current data of optimization algorithm
   uint16_t hop_number; //Number of hops from a participating node, zero if the node itself is participating
   uint8_t part; // Bool to indicate if the sender is participating or not
   uint16_t node;

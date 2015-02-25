@@ -1,7 +1,7 @@
 #include "contiki.h"
 #include "net/rime.h"
 #include <stdio.h>
-#include "nedich_bcast.h"
+#include "nedich_priority.h"
 
 #define TX 0
 /*---------------------------------------------------------------------------*/
@@ -22,7 +22,7 @@ broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)
   packetbuf_copyto(&msg);
   
   // Don't print clock messages
-  printf("%u %u %u", msg.key, msg.iter, from->u8[0]);
+  printf("%u %u %u", msg.part, msg.hop_number, from->u8[0]);
   
   for( i=0; i<DATA_LEN; i++ )
   {
