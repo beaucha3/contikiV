@@ -408,7 +408,21 @@ PROCESS_THREAD(nbr_rx_process, ev, data)
     #endif
     
     leds_off( LEDS_BLUE );
-        
+    
+    // Get new reading
+    reading = (((int64_t)light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC)) << PREC_SHIFT) - MODEL_C;
+    
+	// Nodes with too low of a sensor reading do not participate in gradient descent or averaging
+    if(reading > PARTICIPATE_THRES)
+	{	
+		participate = 1;
+		hops = 0;
+	}
+	else
+	{
+		participate = 0;
+	}
+    
     // If we are participating and so too is the sender, proceed with Nedich Bcast Algorithm
     if(participate && msg.part)
     {       
@@ -418,8 +432,7 @@ PROCESS_THREAD(nbr_rx_process, ev, data)
 			cur_data[i] = (cur_data[i] + msg.data[i])/ 2;		
 		}
 	    
-	    // Update with gradient and re-copy to current data
-	    reading = (((int64_t)light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC)) << PREC_SHIFT) - MODEL_C;
+	    // Update with gradient    	    
 	    grad_iterate( cur_data, cur_data, DATA_LEN, reading);
     }
     // If we aren't participating but the sender is, just take their value and update hops
