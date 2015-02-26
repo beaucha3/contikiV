@@ -22,11 +22,10 @@
 #define TICK_PERIOD CLOCK_SECOND*4
 #define STEP 8ll
 #define PREC_SHIFT 9
-#define START_VAL {30ll << PREC_SHIFT, 30ll << PREC_SHIFT, 13ll << PREC_SHIFT}
 #define EPSILON 128ll      // Epsilon for stopping condition actual epsilon is this value divided by 2^PREC_SHIFT
 #define CAUCHY_NUM 5    // Number of history elements for Cauchy test
 #define ITERATE_HEIGHT 0 //Whether or not to optimize over the height dimension also
-#define PARTICIPATE_THRES 25ll  << PREC_SHIFT //Determines participation of node in optimization
+#define PARTICIPATE_THRES 35ll  << PREC_SHIFT //Determines participation of node in optimization
 
 // Model constants. Observation model follows (A/(r^2 + B)) + C
 // g_model is the denominator, f_model is the entire expression
@@ -81,8 +80,10 @@
  * current iteration number for max iteration stopping,
  * nominal model_c in case calibration is disabled, and stop condition
  */
-static int64_t cur_data[DATA_LEN] = START_VAL;
+static int64_t cur_data[DATA_LEN];
+static int64_t reset_val[DATA_LEN]; 
 static int64_t cur_sensor_reading = 1;
+
 static int16_t hops = 100;
 static uint8_t participate = 0;
 
@@ -238,7 +239,7 @@ PROCESS_THREAD(main_process, ev, data)
   
   static struct etimer et;
   static opt_message_t tick_msg;
-  static int i;
+  static int i;  
    
   // Get neighbor list
   gen_neighbor_list();
@@ -276,9 +277,18 @@ PROCESS_THREAD(main_process, ev, data)
   
   #endif
   
-  // Turn on red LEDs to indicate setup is complete
-  leds_on(LEDS_RED);
+  // Set actual start and reset values, wouldn't have to do this if C didn't require constant inializers
+  cur_data[0] = get_col();
+  reset_val[0] = get_col();
   
+  cur_data[1] = get_row();
+  reset_val[1] = get_row();
+  
+  cur_data[2] = 13ll << PREC_SHIFT;
+  reset_val[2] = 13ll << PREC_SHIFT;
+    
+  // Turn on red LEDs to indicate setup is complete
+  leds_on(LEDS_RED);  
   
   // Don't start algorithm until user button is pressed
   SENSORS_ACTIVATE(button_sensor);    
@@ -308,12 +318,30 @@ PROCESS_THREAD(main_process, ev, data)
     // Nodes with too low of a sensor reading do not participate in gradient descent or averaging
     if(cur_sensor_reading > PARTICIPATE_THRES)
 	{	
+		// If we just switched over, reset estimate to starting location
+		if(participate == 0)
+		{
+			for (i = 0; i<DATA_LEN; i++)
+			{
+				cur_data[i] = reset_val[i];
+			}
+		}
+			
 		participate = 1;
 		hops = 0;
 	}
 	else
 	{
-		participate = 0;
+		// If we just switched over, reset estimate to starting location 
+		if(participate == 1)
+		{
+			for (i = 0; i<DATA_LEN; i++)
+			{
+				cur_data[i] = reset_val[i];
+			}
+		}
+
+		participate = 0;		
 	}
     
     tick_msg.key = TKEY + stop;	
@@ -413,13 +441,30 @@ PROCESS_THREAD(nbr_rx_process, ev, data)
     reading = (((int64_t)light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC)) << PREC_SHIFT) - MODEL_C;
     
 	// Nodes with too low of a sensor reading do not participate in gradient descent or averaging
-    if(reading > PARTICIPATE_THRES)
+    if(cur_sensor_reading > PARTICIPATE_THRES)
 	{	
+		// If we just switched over, reset estimate to starting location
+		if(participate == 0)
+		{
+			for (i = 0; i<DATA_LEN; i++)
+			{
+				cur_data[i] = reset_val[i];
+			}
+		}
+		
 		participate = 1;
 		hops = 0;
 	}
 	else
 	{
+		// If we just switched over, reset estimate to starting location
+		if(participate == 1)
+		{
+			for (i = 0; i<DATA_LEN; i++)
+			{
+				cur_data[i] = reset_val[i];
+			}
+		}
 		participate = 0;
 	}
     
@@ -445,6 +490,7 @@ PROCESS_THREAD(nbr_rx_process, ev, data)
 		
 		hops = 1;
 	}
+	// If neither we nor the sender are participating, take their value if they are closer to a participating node
 	else if(!participate && !msg.part)
 	{
 		if(msg.hop_number < hops)
