@@ -25,7 +25,7 @@
 #define EPSILON 128ll      // Epsilon for stopping condition actual epsilon is this value divided by 2^PREC_SHIFT
 #define CAUCHY_NUM 5    // Number of history elements for Cauchy test
 #define ITERATE_HEIGHT 0 //Whether or not to optimize over the height dimension also
-#define PARTICIPATE_THRES 35ll  << PREC_SHIFT //Determines participation of node in optimization
+#define PARTICIPATE_THRES 25ll  << PREC_SHIFT //Determines participation of node in optimization
 
 // Model constants. Observation model follows (A/(r^2 + B)) + C
 // g_model is the denominator, f_model is the entire expression
@@ -86,7 +86,6 @@ static int64_t cur_sensor_reading = 1;
 
 static int16_t hops = 100;
 static uint8_t participate = 0;
-
 
 static int16_t cur_cycle = 0;
 static uint8_t stop = 0;
@@ -331,16 +330,7 @@ PROCESS_THREAD(main_process, ev, data)
 		hops = 0;
 	}
 	else
-	{
-		// If we just switched over, reset estimate to starting location 
-		if(participate == 1)
-		{
-			for (i = 0; i<DATA_LEN; i++)
-			{
-				cur_data[i] = reset_val[i];
-			}
-		}
-
+	{		
 		participate = 0;		
 	}
     
@@ -457,14 +447,6 @@ PROCESS_THREAD(nbr_rx_process, ev, data)
 	}
 	else
 	{
-		// If we just switched over, reset estimate to starting location
-		if(participate == 1)
-		{
-			for (i = 0; i<DATA_LEN; i++)
-			{
-				cur_data[i] = reset_val[i];
-			}
-		}
 		participate = 0;
 	}
     
@@ -498,10 +480,10 @@ PROCESS_THREAD(nbr_rx_process, ev, data)
 			for( i=0; i<DATA_LEN; i++)
 			{
 				cur_data[i] = msg.data[i];		
-			}
+			}		
 		}
 		
-		hops = msg.hop_number + 1;
+		hops = msg.hop_number + 1;			
 	}
   }
   
