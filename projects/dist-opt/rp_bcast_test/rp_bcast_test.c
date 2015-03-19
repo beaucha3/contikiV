@@ -286,7 +286,7 @@ PROCESS_THREAD(main_process, ev, data)
 			  for(j=0; j<DATA_LEN; j++)
 			  {
 				  // When aggregating, average over number of neighbor updates for each neighbor's value
-				  cur_data[j] = cur_data[j] + (neighbor_vals[i][j]/neighbor_msgs[i]);
+				  cur_data[j] = cur_data[j] + (neighbor_vals[i][j]);
 			  }
 		  }
 	  }

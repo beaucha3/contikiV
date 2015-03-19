@@ -1,5 +1,5 @@
 /*
- * rp_bcast_test.c
+ * rp_bcast_test_old.c
  * 
  */
  

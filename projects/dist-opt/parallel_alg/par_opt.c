@@ -35,7 +35,7 @@
 #define PREC_SHIFT 12
 #define START_VAL {30ll << PREC_SHIFT, 30ll << PREC_SHIFT, 10ll << PREC_SHIFT}
 #define EPSILON 5000ll      // Epsilon for stopping condition actual epsilon is this value divided by 2^PREC_SHIFT
-#define CAUCHY_NUM 10    // Number of history elements for Cauchy test
+#define CAUCHY_NUM 5    // Number of history elements for Cauchy test
 
 // Model constants. Observation model follows (A/(r^2 + B)) + C
 // g_model is the denominator, f_model is the entire expression
@@ -328,7 +328,6 @@ PROCESS_THREAD(main_process, ev, data)
   PROCESS_EXITHANDLER(comms_close(&runicast, &broadcast);)
   PROCESS_BEGIN();
   
-  static int i;
   static struct etimer et;
       
   sniffer.u8[0] = SNIFFER_NODE_0;
@@ -355,6 +354,7 @@ PROCESS_THREAD(main_process, ev, data)
    * Takes 50 readings and averages them, storing the value
    * in a global variable, model_c
    */
+  static int i;
   model_c = 0;
   
   for( i=0; i<50; i++ )

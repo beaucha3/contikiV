@@ -20,11 +20,12 @@
  * Actual step size is STEP/2^PREC_SHIFT, this is to keep all computations as 
  * integers
  */
-#define STEP 16ll
-#define PREC_SHIFT 12
-#define START_VAL {30ll << PREC_SHIFT, 30ll << PREC_SHIFT, 10ll << PREC_SHIFT}
-#define EPSILON 5000ll      // Epsilon for stopping condition
+#define STEP 2ll
+#define PREC_SHIFT 9
+#define START_VAL {30ll << PREC_SHIFT, 30ll << PREC_SHIFT, 13ll << PREC_SHIFT}
+#define EPSILON 128ll      // Epsilon for stopping condition
 #define CAUCHY_NUM 10    // Number of elements for Cauchy test
+#define ITERATE_HEIGHT 0 //Whether or not to optimize over the height dimension also
 
 #define CALIB_C 1     // Set to non-zero to calibrate on reset
 #define MODEL_A (48000ll << PREC_SHIFT)
@@ -39,10 +40,12 @@
 #define SNIFFER_NODE_0 25
 #define SNIFFER_NODE_1 0
 #define NODE_ID (rimeaddr_node_addr.u8[0])
+#define NORM_ID (rimeaddr_node_addr.u8[0] - START_ID + 1)
+
 #define MAX_ITER 1000
 #define RWIN 16ll          // Number of readings to average light sensor reading over
 
-#define DEBUG 0
+#define DEBUG 1
 #define MAX_RETRANSMISSIONS 4
 #define NUM_HISTORY_ENTRIES 4
 
@@ -75,7 +78,8 @@
 //Variable storing previous cycle's local estimate for stop condition
 static int64_t cur_data[DATA_LEN] = {0};
 static int16_t cur_cycle = 0;
-static int64_t model_c = 88ll << PREC_SHIFT;
+static int64_t baseline[NUM_NODES] = {87ll, 71ll, 88ll, 70ll, 95ll, 84ll, 73ll, 93ll, 85ll};
+static int64_t model_c;
 
 //Variables for bounding box conditions
 static int64_t max_col = (90ll << PREC_SHIFT); 
@@ -83,7 +87,7 @@ static int64_t max_row = (90ll << PREC_SHIFT);
 static int64_t min_col = -1 * (30ll << PREC_SHIFT);
 static int64_t min_row = -1 * (30ll << PREC_SHIFT);
 static int64_t max_height = (30ll << PREC_SHIFT);
-static int64_t min_height = (3ll << PREC_SHIFT);  
+static int64_t min_height = (3ll << PREC_SHIFT); 
 
 //Variables to store this node's immediate upstream neighbor and sniffer
 static rimeaddr_t neighbor;
@@ -150,6 +154,13 @@ static void grad_iterate(int64_t* iterate, int64_t* result, int len, int64_t rea
      * ( MODEL_A * (reading - f) * (iterate[i] - node_loc[i]) ) needs at 
      * most 58 bits, and after the division, is at least 4550.
      */
+     
+     if(!ITERATE_HEIGHT && i == DATA_LEN-1)
+    {
+		result[i] = iterate[i];
+		continue;
+	}     
+     
     result[i] = iterate[i] - ( (4ll * STEP * ( ((MODEL_A * (reading - f) * (iterate[i] - node_loc[i])) / gsq) >> PREC_SHIFT)) >> PREC_SHIFT);
     
 //     result[i] = iterate[i] - ((((STEP * 4ll * (MODEL_A * (reading - f_model(iterate)) / ((g_model(iterate) * g_model(iterate)) >> PREC_SHIFT))) >> PREC_SHIFT) * (iterate[i] - node_loc[i])) >> PREC_SHIFT);
@@ -180,15 +191,15 @@ static void grad_iterate(int64_t* iterate, int64_t* result, int len, int64_t rea
      result[1] = min_row;
    }
    
-   if(result[2] > max_height)
-   {
-	   result[2] = max_height;
-   }
+   //if(result[2] > max_height)
+   //{
+   //	   result[2] = max_height;
+   //}
 	  
-   if(result[2] < min_height)
-   {
-	   result[2] = min_height;
-   } 
+   //if(result[2] < min_height)
+   //{
+   //	   result[2] = min_height;
+   //} 
   
 }
 
@@ -306,6 +317,11 @@ PROCESS_THREAD(main_process, ev, data)
   broadcast_open(&broadcast, SNIFFER_CHANNEL, &broadcast_call);
   runicast_open(&runicast, COMM_CHANNEL, &runicast_callbacks);
 
+  model_c = (baseline[NORM_ID]) << PREC_SHIFT;
+  
+  #if DEBUG > 0
+	printf("Calibration Harcoded Value C = %"PRIi64"\n", model_c);
+  #endif   
   
 #if CALIB_C > 0
   /*
@@ -324,6 +340,9 @@ PROCESS_THREAD(main_process, ev, data)
   }
   
   model_c = (model_c / 50) << PREC_SHIFT;
+  #if DEBUG > 0
+      printf("Calibration Constant C = %"PRIi64"\n", model_c);
+  #endif
   
   // Sniffer is expecting an opt_message_t
   //~ out.key = NODE_ID;
@@ -443,12 +462,12 @@ PROCESS_THREAD(rx_process, ev, data)
     /*
      * Stopping condition
      */
-    if( msg.key == (MKEY + 1) || out.iter >= MAX_ITER || cauchy_conv(msg.data) )
+    if( msg.key == (MKEY + 1) )//|| out.iter >= MAX_ITER || cauchy_conv(msg.data) )
     {
       leds_on( LEDS_BLUE );
       out.key = MKEY + 1;
       
-      stop = 1;
+      //stop = 1;
     }
     else if(msg.key == MKEY)
     {

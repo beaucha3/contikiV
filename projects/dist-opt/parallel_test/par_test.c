@@ -312,7 +312,11 @@ PROCESS_THREAD(main_process, ev, data)
     
     grad_iterate(&x, &res);
 	printf("Gradient Test: x = 1, iterate = %"PRIi64"\n", res);
-  #endif	
+  #endif
+  
+  #if DEBUG > 0
+    printf("Retransmission wait fraction (denominator): %i\n", (CLOCK_SECOND)/RUNICAST_CONF_REXMIT_TIME);
+  #endif
   
   SENSORS_ACTIVATE(light_sensor);
   

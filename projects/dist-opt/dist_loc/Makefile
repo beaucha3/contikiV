@@ -1,4 +1,4 @@
-CONTIKI_PROJECT = obs_model
+CONTIKI_PROJECT = obs_model obs_model_sniffer
 all: $(CONTIKI_PROJECT) 
 
 APPS = serial-shell global-sensor

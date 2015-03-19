@@ -19,12 +19,12 @@
  * Actual step size is STEP/2^PREC_SHIFT, this is to keep all computations as 
  * integers
  */
-#define TICK_PERIOD CLOCK_SECOND*2
+#define TICK_PERIOD CLOCK_SECOND*4
 #define STEP 8ll
 #define PREC_SHIFT 9
-#define START_VAL {30ll << PREC_SHIFT, 30ll << PREC_SHIFT, 10ll << PREC_SHIFT}
 #define EPSILON 128ll      // Epsilon for stopping condition actual epsilon is this value divided by 2^PREC_SHIFT
 #define CAUCHY_NUM 5    // Number of history elements for Cauchy test
+#define ITERATE_HEIGHT 0 //Whether or not to optimize over the height dimension also
 
 // Model constants. Observation model follows (A/(r^2 + B)) + C
 // g_model is the denominator, f_model is the entire expression
@@ -77,7 +77,7 @@
  * current iteration number for max iteration stopping,
  * nominal model_c in case calibration is disabled, and stop condition
  */
-static int64_t cur_data[DATA_LEN] = START_VAL;
+static int64_t cur_data[DATA_LEN];
 static int16_t cur_cycle = 0;
 static uint8_t stop = 0;
 
@@ -169,6 +169,13 @@ static void grad_iterate(int64_t* iterate, int64_t* result, int len, int64_t rea
      * ( MODEL_A * (reading - f) * (iterate[i] - node_loc[i]) ) needs at 
      * most 58 bits, and after the division, is at least 4550.
      */
+     
+    if(!ITERATE_HEIGHT && i == DATA_LEN-1)
+    {
+		result[i] = iterate[i];
+		continue;
+	}
+     
     result[i] = iterate[i] - ( (4ll * STEP * ( ((MODEL_A * (reading - f) * (iterate[i] - node_loc[i])) / gsq) >> PREC_SHIFT)) >> PREC_SHIFT);
   }
   
@@ -234,7 +241,7 @@ PROCESS_THREAD(main_process, ev, data)
   etimer_set(&et, CLOCK_SECOND*2);
   PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
   
-  model_c = = (baseline[NORM_ID]) << PREC_SHIFT;  
+  model_c = (baseline[NORM_ID]) << PREC_SHIFT;  
   
   #if CALIB_C > 0
     /*
@@ -258,6 +265,13 @@ PROCESS_THREAD(main_process, ev, data)
     #endif
   
   #endif
+  
+  // Set actual start values, wouldn't have to do this if C didn't require constant inializers
+  cur_data[0] = get_col();
+  
+  cur_data[1] = get_row();
+  
+  cur_data[2] = 13ll << PREC_SHIFT;
   
   // Don't start algorithm until user button is pressed
   SENSORS_ACTIVATE(button_sensor);    
@@ -361,10 +375,10 @@ PROCESS_THREAD(main_process, ev, data)
 	  }
       
       // Check stop condition and set stop variable
-	  if(cauchy_conv(cur_data) || cur_cycle == MAX_ITER)
-	  {
-	    stop = 1;
-	  }
+	  //if(cauchy_conv(cur_data) || cur_cycle == MAX_ITER)
+	  //{
+	    //stop = 1;
+	  //}
       
       // Reset neighbor counts
       for(i=0;i<MAX_NBRS;i++)

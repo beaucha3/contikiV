@@ -22,7 +22,6 @@
 #define TICK_PERIOD CLOCK_SECOND*4
 #define STEP 8ll
 #define PREC_SHIFT 9
-#define START_VAL {30ll << PREC_SHIFT, 30ll << PREC_SHIFT, 13ll << PREC_SHIFT}
 #define EPSILON 128ll      // Epsilon for stopping condition actual epsilon is this value divided by 2^PREC_SHIFT
 #define CAUCHY_NUM 5    // Number of history elements for Cauchy test
 #define ITERATE_HEIGHT 0 //Whether or not to optimize over the height dimension also
@@ -80,7 +79,7 @@
  * current iteration number for max iteration stopping,
  * nominal model_c in case calibration is disabled, and stop condition
  */
-static int64_t cur_data[DATA_LEN] = START_VAL;
+static int64_t cur_data[DATA_LEN];
 static int64_t cur_sensor_reading = 1;
 static int16_t cur_cycle = 0;
 static uint8_t stop = 0;
@@ -271,6 +270,13 @@ PROCESS_THREAD(main_process, ev, data)
   
   #endif
   
+  // Set actual start values, wouldn't have to do this if C didn't require constant inializers
+  cur_data[0] = get_col();
+  
+  cur_data[1] = get_row();
+  
+  cur_data[2] = 13ll << PREC_SHIFT;
+ 
   // Turn on red LEDs to indicate setup is complete
   leds_on(LEDS_RED);
   

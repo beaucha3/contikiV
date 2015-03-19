@@ -9,18 +9,18 @@
  * Actual step size is STEP/256, this is to keep all computations as 
  * integers
  */
-#define STEP 2
+#define STEP 8
 #define PREC_SHIFT 9
-#define START_VAL {30 << PREC_SHIFT, 30 << PREC_SHIFT, 10 << PREC_SHIFT}
-#define EPSILON 16      // Epsilon for stopping condition
-#define CAUCHY_NUM 10
+#define START_VAL {0} //{30 << PREC_SHIFT, 30 << PREC_SHIFT, 10 << PREC_SHIFT}
+#define EPSILON 4      // Epsilon for stopping condition
+#define CAUCHY_NUM 5
 
 #define CALIB_C 1     // Set to non-zero to calibrate on reset
 #define MODEL_A (48000l << PREC_SHIFT)
 #define MODEL_B (48l << PREC_SHIFT)
 #define MODEL_C model_c
 #define SPACING 30      // Centimeters of spacing
-#define DATA_LEN 3
+#define DATA_LEN 1 //3
 #define MAX_ITER 1000
 
 /*
@@ -48,7 +48,9 @@ static int64_t min_height = (3 << PREC_SHIFT);
 
 int64_t get_row( int id );
 int64_t get_col( int id );
-int64_t grad_iterate(int64_t* iterate, int64_t* result, int len, int id);
+
+int64_t grad_iterate(int64_t iterate, int64_t node_id);
+//int64_t grad_iterate(int64_t* iterate, int64_t* result, int len, int id);
 int64_t norm2(int64_t* a, int64_t* b, int len);
 int64_t abs_diff64(int64_t a, int64_t b);
 uint8_t cauchy_conv( int64_t* new );
@@ -68,16 +70,18 @@ int main()
   
   for( i=0; i<MAX_ITER; i++ )
   {
-    for( j=0; j< 9; j++ )
+    for( j=1; j< 5; j++ )
     {
 	    //printf("%i,%i,%lli,%lli,%lli\n", 9*i + j, j, x[0], x[1], x[2]);
-      
-	    d = grad_iterate( x, r, DATA_LEN, j );
-      memcpy(x, r, DATA_LEN*sizeof(x[0]));
+        printf("%i,%i,%lli\n", 4*i + j, j, x[0]);
+	    d = grad_iterate( x[0], j );
+	    x[0] = d;
+	    //d = grad_iterate( x, r, DATA_LEN, j );
+        //memcpy(x, r, DATA_LEN*sizeof(x[0]));
     }
     if( cauchy_conv( x ) )
     {
-      printf("Converged in %i\n", 9*i + j);
+      printf("Converged in %i\n", 4*i + j);
       break;
     }
   }
@@ -85,69 +89,69 @@ int main()
   return 0;
 }
 
-//~ static int64_t grad_iterate(int64_t iterate, int64_t node_id)
-//~ {
-  //~ return ( iterate - ((STEP * ( (1 << (node_id + 1))*iterate - (node_id << (PREC_SHIFT + 1)))) >> PREC_SHIFT) );
-//~ }
-
-int64_t grad_iterate(int64_t* iterate, int64_t* result, int len, int id)
+int64_t grad_iterate(int64_t iterate, int64_t node_id)
 {
-  int i;
-  int64_t r = 0; //random() % 5 - 2;
-  
-  int64_t node_loc[3] = {get_col(id), get_row(id), 0};
-  int64_t reading = (data[id] + r) << PREC_SHIFT;
-  
-  for(i = 0; i < len; i++)
-  {
-    int64_t f = f_model(iterate, id);
-    int64_t g = g_model(iterate, id);
-    int64_t gsq = (g*g) >> PREC_SHIFT;
-        
-    /*
-     * ( MODEL_A * (reading - f) * (iterate[i] - node_loc[i]) ) needs at 
-     * most 58 bits, and after the division, is at least 4550.
-     */
-    result[i] = iterate[i] - ( (4 * STEP * ( ((MODEL_A * (reading - f) * (iterate[i] - node_loc[i])) / gsq) >> PREC_SHIFT)) >> PREC_SHIFT);
-  }
-     
-  /*
-   * Bounding Box conditions to bring the iterate back if it strays too far 
-   */
-   //printf("result[0] = %"PRIi64" result[1] = %"PRIi64" result[2] = %"PRIi64"\n", result[0], result[1], result[2]);
-   //printf("max_col = %"PRIi64" min_col = %"PRIi64" max_row = %"PRIi64" min_row = %"PRIi64" max_height = %"PRIi64" min_height = %"PRIi64"\n", max_col, min_col, max_row, min_row, max_height, min_height);
-   if(result[0] > max_col)
-   {
-	   result[0] = max_col;
-   }
-   
-   if(result[0] < min_col)
-   {
-	   result[0] = min_col;
-   }
-
-   if(result[1] > max_row)
-   {
-	   result[1] = max_row;
-   }
-   
-   if(result[1] < min_row)
-   {
-     result[1] = min_row;
-   }
-   
-   if(result[2] > max_height)
-   {
-	   result[2] = max_height;
-   }
-	  
-   if(result[2] < min_height)
-   {
-	   result[2] = min_height;
-   } 
-  
-  return reading;
+   return ( iterate - ((STEP * ( (1 << (node_id + 1))*iterate - (node_id << (PREC_SHIFT + 1)))) >> PREC_SHIFT) );
 }
+
+//int64_t grad_iterate(int64_t* iterate, int64_t* result, int len, int id)
+//{
+  //int i;
+  //int64_t r = 0; //random() % 5 - 2;
+  
+  //int64_t node_loc[3] = {get_col(id), get_row(id), 0};
+  //int64_t reading = (data[id] + r) << PREC_SHIFT;
+  
+  //for(i = 0; i < len; i++)
+  //{
+    //int64_t f = f_model(iterate, id);
+    //int64_t g = g_model(iterate, id);
+    //int64_t gsq = (g*g) >> PREC_SHIFT;
+        
+    ///*
+     //* ( MODEL_A * (reading - f) * (iterate[i] - node_loc[i]) ) needs at 
+     //* most 58 bits, and after the division, is at least 4550.
+     //*/
+    //result[i] = iterate[i] - ( (4 * STEP * ( ((MODEL_A * (reading - f) * (iterate[i] - node_loc[i])) / gsq) >> PREC_SHIFT)) >> PREC_SHIFT);
+  //}
+     
+  ///*
+   //* Bounding Box conditions to bring the iterate back if it strays too far 
+   //*/
+   ////printf("result[0] = %"PRIi64" result[1] = %"PRIi64" result[2] = %"PRIi64"\n", result[0], result[1], result[2]);
+   ////printf("max_col = %"PRIi64" min_col = %"PRIi64" max_row = %"PRIi64" min_row = %"PRIi64" max_height = %"PRIi64" min_height = %"PRIi64"\n", max_col, min_col, max_row, min_row, max_height, min_height);
+   //if(result[0] > max_col)
+   //{
+	   //result[0] = max_col;
+   //}
+   
+   //if(result[0] < min_col)
+   //{
+	   //result[0] = min_col;
+   //}
+
+   //if(result[1] > max_row)
+   //{
+	   //result[1] = max_row;
+   //}
+   
+   //if(result[1] < min_row)
+   //{
+     //result[1] = min_row;
+   //}
+   
+   //if(result[2] > max_height)
+   //{
+	   //result[2] = max_height;
+   //}
+	  
+   //if(result[2] < min_height)
+   //{
+	   //result[2] = min_height;
+   //} 
+  
+  //return reading;
+//}
 
 int64_t get_row( int id )
 {
@@ -274,7 +278,8 @@ uint8_t cauchy_conv( int64_t* new )
     
     for( i=0; i<CAUCHY_NUM; i++ )
     {
-      printf("%d: %lli, %lli, %lli\n", i, seq[i][0], seq[i][1], seq[i][2]);
+      //printf("%d: %lli, %lli, %lli\n", i, seq[i][0], seq[i][1], seq[i][2]);
+      printf("%d: %lli, \n", i, seq[i][0]);
     }
   }
   

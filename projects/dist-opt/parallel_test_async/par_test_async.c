@@ -401,7 +401,6 @@ PROCESS_THREAD(main_process, ev, data)
   PROCESS_END();
 }
 
-
 /*
  * Started when a neighbor runicast packet is received.
  * 
