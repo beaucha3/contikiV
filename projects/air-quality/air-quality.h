@@ -75,12 +75,11 @@ Special Thanks to: Neeraj Venkatesan, UIUC M.S. EE graduate
 
 /* Useful structure definitions */
 
-typedef struct data_message_s /* Structure for messages sent via broadcast or unicast */
+typedef struct data_message_s /* Structure for messages sent via broadcast  */
 {
 	uint16_t key; /* Message key */
-	uint16_t address; /* Address of sender */
-	int32_t temp; /* Temperature data from sensor */
-	int32_t humid; /* Humidity data from sensor */
+	int16_t temp; /* Temperature data from sensor */
+	int16_t humid; /* Humidity data from sensor */
 	
 	uint8_t seqno; /* Only relevant for broadcast packets (these use sequence numbers) */
 } 
