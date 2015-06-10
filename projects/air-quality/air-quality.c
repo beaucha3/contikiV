@@ -26,7 +26,7 @@ bool is_neighbor(node_t *one, node_t *two);
 void generate_grid(node_t **topleft, struct memb *block, unsigned int n);
 void free_grid(node_t *head, struct memb *block);
 node_t* getNode(unsigned char addr, node_t *head);
-void comms_close(struct broadcast_conn *one, struct unicast_conn *two);
+void comms_close(struct broadcast_conn *one, struct broadcast_conn *two);
 
 
 MEMB(node_grid, node_t, NUM_MOTES); /* Declare memory block for an NxN grid */
@@ -38,28 +38,107 @@ AUTOSTART_PROCESSES(&main_process); /* Main process will start upon module load 
 
 /* Set up communications */
 
-static void unicast_recv(struct unicast_conn *c, const rimeaddr_t *from) /* Executes if unicast is received */
+static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from) /* Executes if broadcast is received */
 {
 	static data_message_t message; /* Temporary variable to store received data */
+	node_t *cur, *sender; /* Will store pointers to node structures associated with relevant addresses */
+	uint8_t seqno_gap; /* Used in computing average sequence number gap */
 
-	packetbuf_copyto(&message); /* Store contents of packet buffer */
+	/* Variables used to convert raw sensor values to usable ones */
 
-	printf("Message received from %d.%d:\n", from->u8[0], from->u8[1]); /* Print the message */
-	printf("The message key is %d, the temperature value is %d, and the humidity value is %d\n", message.key, message.temp, message.humid);
+	static float s;
+	static int dec_t; /* Separate integral and fractional parts are necessary as contiki OS uses fixed point only */
+	static int dec_h;
+	static float frac_t;
+	static float frac_h;
+
+	cur = getNode(NODE_ID, list_head(node_list)); /* Get a pointer to the node on which this program is running */
+
+	if(cur == NULL) /* If we couldn't get a pointer to the node */
+	{
+		printf("Error! The node's address isn't what we thought it was.\n");
+		exit(-1);
+	}
+
+	sender = getNode(from->u8[0], list_head(node_list)); /* Get a pointer to the node that sent the broadcast */
+
+	if(is_neighbor(cur, sender)) /* Take action if broadcast is received by neighboring node */
+	{ 
+		 /* Store contents of packet buffer */
+
+		packetbuf_copyto(&message);
+		
+
+		#if DEBUG
+
+			printf("Key %d, Address %d, Temp %d, Humidity %d, Seqno %d\n", message.key, message.address, message.temp, message.humid, message.seqno);
+
+		#endif
+
+		/* Temperature conversion */
+
+		s = -39.60 + 0.01*message.temp; /* Store temperature in degrees C */
+		dec_t = s; /* Store integral part */
+		frac_t = s - dec_t; /* Store fractional part */
+
+		/* Humidity conversion */
+
+		s = -4 + .0405*message.humid + (-2.8 * 0.000001*(pow(message.humid,2))); /*Store relative humidity (%)*/
+		dec_h = s; /* Store integral part */
+		frac_h = s - dec_h; /* Store fractional part */
+
+
+		printf("Message received from %d.%d:\n", from->u8[0], from->u8[1]); /* Print the message */
+		printf("The message key is %d, the temperature value is %d.%02u degrees C (%d), and the humidity value is %d.%02u % (%d)\n", message.key, dec_t, (unsigned int)(100*frac_t), message.temp, dec_h, (unsigned int)(100*frac_h), message.humid);
+
+		/* Update message quality metrics. Not strictly necessary as the employed algorithm accounts for communications unreliabiliy, but it's useful to have for debugging if necessary. */
+
+		sender->last_seqno = message.seqno-1;
+		sender->seqno_gap = SEQNO_EWMA_UNITY;
+		sender->last_rssi = packetbuf_attr(PACKETBUF_ATTR_RSSI); /* Updated RSSI AND LQI associated with messages sent from node "sender" */
+  		sender->last_lqi = packetbuf_attr(PACKETBUF_ATTR_LINK_QUALITY);
+
+		/* Compute average sequence number gap associated with messages from sender (this indicates the number of lost broadcast packets) */
+
+		seqno_gap = message.seqno - sender->last_seqno;
+  		sender->seqno_gap = (((uint32_t)seqno_gap * SEQNO_EWMA_UNITY) *
+                      SEQNO_EWMA_ALPHA) / SEQNO_EWMA_UNITY +
+                      ((uint32_t)sender->seqno_gap * (SEQNO_EWMA_UNITY - SEQNO_EWMA_ALPHA)) / SEQNO_EWMA_UNITY;
+
+		/* Update sender's last sequence number */
+
+		sender->last_seqno = message.seqno;
+
+		/* Print quality metrics if we are in debug mode */
+
+		#if DEBUG
+
+		printf("broadcast message received from %d.%d with seqno %d, RSSI %u, LQI %u, avg seqno gap %d.%02d\n",
+         from->u8[0], from->u8[1],
+         message.seqno,
+         packetbuf_attr(PACKETBUF_ATTR_RSSI),
+         packetbuf_attr(PACKETBUF_ATTR_LINK_QUALITY),
+         (int)(sender->seqno_gap / SEQNO_EWMA_UNITY),
+         (int)(((100UL * sender->seqno_gap) / SEQNO_EWMA_UNITY) % 100));
+
+		#endif
+	}
 }
 
-static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)/* Do nothing if broadcast is received */
+/* Do nothing if broadcast is received from sniffer node */
+
+static void broadcast_recv_sniffer(struct broadcast_conn *c, const rimeaddr_t *from)
 {
 }
 
 /* This is where we specify that unicast_recv should be called when a unicast is received.
 The unicast_call structure is passed as a pointer to unicast_open in the main_process */
 
-static const struct unicast_callbacks unicast_call = {unicast_recv};
-static const struct broadcast_callbacks broadcast_call = {broadcast_recv}; /* Necessary to open a bc channel */
+static const struct broadcast_callbacks broadcast_call = {broadcast_recv};
+static const struct broadcast_callbacks broadcast_call_sn = {broadcast_recv_sniffer}; /* Necessary to open a bc channel */
 
-static struct unicast_conn uc;
-static struct broadcast_conn bc; /* Used only to send messages to sniffer node */
+static struct broadcast_conn bc;
+static struct broadcast_conn bc_sn; /* Used only to send messages to sniffer node */
 
 PROCESS_THREAD(main_process, ev, data) /* protothread for main process */
 {
@@ -71,15 +150,14 @@ PROCESS_THREAD(main_process, ev, data) /* protothread for main process */
 
 	static struct etimer et;
 	static struct etimer periodic;
+	static uint8_t seqno = 0;
 	static data_message_t out;
 	out.address = NODE_ID; /* Initialize fields of out */
 	out.key = M_KEY;
 	rimeaddr_t addr;
 	node_t *topleft; /* Pointer to top-left node in the grid */
-	node_t *cur; /* Pointer to node on which this program is running */
-	node_t *temp; /* Temporary node used in sending unicast */
 
-	PROCESS_EXITHANDLER(comms_close(&bc, &uc)); /* Close the unicast upon exiting */
+	PROCESS_EXITHANDLER(comms_close(&bc, &bc_sn)); /* Close the unicast upon exiting */
 	PROCESS_BEGIN(); /* Begin process */
 
 	/* Don't start data collection until user button is pressed */
@@ -89,8 +167,8 @@ PROCESS_THREAD(main_process, ev, data) /* protothread for main process */
 
 	generate_grid(&topleft, &node_grid, MAX_ROWS); /* First, generate the grid of nodes */
 
-	unicast_open(&uc, COMM_CHANNEL, &unicast_call); /* open unicast on COMM_CHANNEL */
-	broadcast_open(&bc, SNIFFER_CHANNEL, &broadcast_call); /* open broadcast for sniffer communication */
+	broadcast_open(&bc, COMM_CHANNEL, &broadcast_call); /* open unicast on COMM_CHANNEL */
+	broadcast_open(&bc_sn, SNIFFER_CHANNEL, &broadcast_call_sn); /* open broadcast for sniffer communication */
 
 	/* Start wait process.  This will end the main process when a button sensor event is posted */
 	process_start(&wait_process, NULL);
@@ -100,43 +178,37 @@ PROCESS_THREAD(main_process, ev, data) /* protothread for main process */
 		etimer_set(&periodic, CLOCK_SECOND*PERIOD); /* collect data every two seconds */
 		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&periodic));
 
+		/* Set sequence number */
+
+		out.seqno = seqno;
+
 		/* Poll sensor */
 
 		out.temp = sht11_sensor.value(SHT11_SENSOR_TEMP);
 		out.humid = sht11_sensor.value(SHT11_SENSOR_HUMIDITY);
 
-		packetbuf_copyfrom(&out, sizeof(out));
-		broadcast_send(&bc); /* Broadcast to sniffer node */
+		#if DEBUG
+			printf("K: %d\n", out.key);
+			printf("A: %d\n", out.address);
+			printf("T: %d\n", out.temp);
+			printf("H: %d\n", out.humid);
+			printf("S: %d\n", out.seqno);
+		#endif
+
+		packetbuf_copyfrom(&out, sizeof(out)); /* Encapsulate data from out into a packet to be sent */
+		broadcast_send(&bc_sn); /* Broadcast to sniffer node */
 
 		packetbuf_clear();
 
-		packetbuf_copyfrom(&out, sizeof(out)); /* Encapsulate data from out into a packet to be sent */
+		packetbuf_copyfrom(&out, sizeof(out));
 
-		cur = getNode(NODE_ID, list_head(node_list)); /* Get a pointer to the node on which this program is 									running */
-
-		if(cur == NULL) /* If we couldn't get a pointer to the node */
-		{
-			printf("Error! The node's address isn't what we thought it was.\n");
-			exit(-1);
-		}
-
-		temp = list_head(node_list);
-
-		while(temp != NULL) /* Send a unicast message to neighboring nodes */
-		{
-			if(is_neighbor(temp, cur))
-			{
-				unicast_send(&uc, &(temp->addr));
+		broadcast_send(&bc); /* Broadcast to neighboring nodes */
 				
-				#if DEBUG
-					printf("This node has address %d\n", NODE_ID);
-					printf("UC sent to %d\n", temp->addr.u8[0]);
-				#endif
-			}
-
-			temp = list_item_next(temp);
-		}
-
+		#if DEBUG
+			printf("This node has address %d\n", NODE_ID);
+			printf("Broadcast sent\n");
+		#endif
+		
 
 		/* Blink red LEDs to indicate that we sent a message */
 
@@ -149,6 +221,7 @@ PROCESS_THREAD(main_process, ev, data) /* protothread for main process */
 
 		etimer_reset(&periodic);
 		packetbuf_clear();
+		seqno++; /* Increment sequence number each time we send a message (as it's next in the "sequence") */
 	}
 
 	SENSORS_DEACTIVATE(button_sensor); /* Deactivate sensors when we're done */
@@ -319,12 +392,11 @@ node_t* getNode(unsigned char addr, node_t *head)
 
 /* Closes communications; called upon conclusion of the main process */
 
-void comms_close(struct broadcast_conn *one, struct unicast_conn *two)
+void comms_close(struct broadcast_conn *one, struct broadcast_conn *two)
 {
 	broadcast_close(one);
-	unicast_close(two);
+	broadcast_close(two);
 }
-
 
 
 
