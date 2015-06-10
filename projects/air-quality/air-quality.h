@@ -46,7 +46,7 @@ Special Thanks to: Neeraj Venkatesan, UIUC M.S. EE graduate
 
 #define NUM_MOTES 9 /* Motes will be arranged in a 3x3 grid */
 #define NUM_NEIGHBORS 4 /* In a rectangular grid, the maximum number of neighbors is 4 */
-#define COMM_CHANNEL 146 /* Hardware-specific */
+#define COMM_CHANNEL 100 /* Hardware-specific */
 #define SNIFFER_CHANNEL 129
 #define M_KEY 555
 #define MAX_ROWS 3 /* There will be three rows of motes, indexed from 0 to MAX_ROWS-1 */
@@ -79,25 +79,12 @@ typedef struct data_message_s /* Structure for messages sent via broadcast or un
 {
 	uint16_t key; /* Message key */
 	uint16_t address; /* Address of sender */
-	int64_t temp; /* Temperature data from sensor */
-	int64_t humid; /* Humidity data from sensor */
+	int32_t temp; /* Temperature data from sensor */
+	int32_t humid; /* Humidity data from sensor */
 	
-#if 0
-	uint8_t type; /* Type of packet we are sending (broadcast or unicast) */
 	uint8_t seqno; /* Only relevant for broadcast packets (these use sequence numbers) */
-#endif
 } 
 data_message_t;
-
-#if 0
-
-enum CAST /* Enumeration data type */
-{
-	BROADCAST = 0, /* We can broadcast a packet or send it to one node only */
-	UNICAST = 1
-};
-
-#endif
 
 typedef struct node_s /* Structure defining node relations. Each node can have up to 4 neighbors */
 {
@@ -110,14 +97,12 @@ typedef struct node_s /* Structure defining node relations. Each node can have u
 
 	rimeaddr_t addr; /* Rime address of the node in question */
 
-#if 0	
-
-	/* Hold the Received Signal Strength Indicator (RSSI) and Link Quality Indicator (LQI) values that are 		received from incoming broadcast packets */
-	uint16_t last_rssi, last_lqi;
+	/* Hold the Received Signal Strength Indicator (RSSI) and Link Quality Indicator (LQI) values that are 		received from broadcast packets outgoing from this node */
+	uint32_t last_rssi, last_lqi;
 	
-	uint8_t last_seqno; /* Last sequence number we saw from a neighbor */
-	uint8_t seqno_gap; /* Average sequence number gap we have seen from a neighbor */
-#endif
+	uint8_t last_seqno; /* Last sequence number a neighbor saw from this node */
+	uint8_t seqno_gap; /* Average sequence number gap a neighbor saw from this node */
+
 }
 node_t;
 
