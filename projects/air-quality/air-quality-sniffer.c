@@ -1,6 +1,6 @@
 /*
 
-File: One of the main source files for the air quality monitoring project.
+File: One of the main source files for the summer 2015 air quality monitoring project.
 When compiled, this file is meant to be loaded onto the sniffer node that receives brodcasts from the main network.
 
 
