@@ -14,7 +14,7 @@ Special Thanks to: Neeraj Venkatesan, UIUC M.S. EE graduate
 
 */
 
-#define DEBUG 1
+#define DEBUG 0
 
 #include "air-quality.h" /* All includes, structure definitions, and macros are in this file- refer to it */
 
@@ -71,7 +71,7 @@ static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from) /* 
 
 		#if DEBUG
 
-			printf("Key %d, Address %d, Temp %d, Humidity %d, Seqno %d\n", message.key, message.address, message.temp, message.humid, message.seqno);
+			printf("Key %d, Temp %d, Seqno %d, Humidity %d\n", message.key, message.temp, message.seqno, message.humid);
 
 		#endif
 
@@ -152,9 +152,10 @@ PROCESS_THREAD(main_process, ev, data) /* protothread for main process */
 	static struct etimer periodic;
 	static uint8_t seqno = 0;
 	static data_message_t out;
-	out.address = NODE_ID; /* Initialize fields of out */
+	
+	/* Initialize key field of out */
 	out.key = M_KEY;
-	rimeaddr_t addr;
+
 	node_t *topleft; /* Pointer to top-left node in the grid */
 
 	PROCESS_EXITHANDLER(comms_close(&bc, &bc_sn)); /* Close the unicast upon exiting */
@@ -189,7 +190,6 @@ PROCESS_THREAD(main_process, ev, data) /* protothread for main process */
 
 		#if DEBUG
 			printf("K: %d\n", out.key);
-			printf("A: %d\n", out.address);
 			printf("T: %d\n", out.temp);
 			printf("H: %d\n", out.humid);
 			printf("S: %d\n", out.seqno);
