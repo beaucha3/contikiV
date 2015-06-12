@@ -27,6 +27,8 @@ void generate_grid(node_t **topleft, struct memb *block, unsigned int n);
 void free_grid(node_t *head, struct memb *block);
 node_t* getNode(unsigned char addr, node_t *head);
 void comms_close(struct broadcast_conn *one, struct broadcast_conn *two);
+double get_air_diam(void);
+double get_diff_coeff(double celsius);
 
 
 MEMB(node_grid, node_t, NUM_MOTES); /* Declare memory block for an NxN grid */
@@ -34,23 +36,14 @@ LIST(node_list); /* Declare a Contiki list of node structures */
 
 PROCESS(main_process, "main"); /* Declare main process */
 PROCESS(wait_process, "Wait process"); /* Declare wait process */
+PROCESS(update_process, "Update process"); /* Declare update process */
 AUTOSTART_PROCESSES(&main_process); /* Main process will start upon module load */
 
 /* Set up communications */
 
 static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from) /* Executes if broadcast is received */
 {
-	static data_message_t message; /* Temporary variable to store received data */
 	node_t *cur, *sender; /* Will store pointers to node structures associated with relevant addresses */
-	uint8_t seqno_gap; /* Used in computing average sequence number gap */
-
-	/* Variables used to convert raw sensor values to usable ones */
-
-	static float s;
-	static int dec_t; /* Separate integral and fractional parts are necessary as contiki OS uses fixed point only */
-	static int dec_h;
-	static float frac_t;
-	static float frac_h;
 
 	cur = getNode(NODE_ID, list_head(node_list)); /* Get a pointer to the node on which this program is running */
 
@@ -64,64 +57,7 @@ static void broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from) /* 
 
 	if(is_neighbor(cur, sender)) /* Take action if broadcast is received by neighboring node */
 	{ 
-		 /* Store contents of packet buffer */
-
-		packetbuf_copyto(&message);
-		
-
-		#if DEBUG
-
-			printf("Key %d, Temp %d, Seqno %d, Humidity %d\n", message.key, message.temp, message.seqno, message.humid);
-
-		#endif
-
-		/* Temperature conversion */
-
-		s = -39.60 + 0.01*message.temp; /* Store temperature in degrees C */
-		dec_t = s; /* Store integral part */
-		frac_t = s - dec_t; /* Store fractional part */
-
-		/* Humidity conversion */
-
-		s = -4 + .0405*message.humid + (-2.8 * 0.000001*(pow(message.humid,2))); /*Store relative humidity (%)*/
-		dec_h = s; /* Store integral part */
-		frac_h = s - dec_h; /* Store fractional part */
-
-
-		printf("Message received from %d.%d:\n", from->u8[0], from->u8[1]); /* Print the message */
-		printf("The message key is %d, the temperature value is %d.%02u degrees C (%d), and the humidity value is %d.%02u % (%d)\n", message.key, dec_t, (unsigned int)(100*frac_t), message.temp, dec_h, (unsigned int)(100*frac_h), message.humid);
-
-		/* Update message quality metrics. Not strictly necessary as the employed algorithm accounts for communications unreliabiliy, but it's useful to have for debugging if necessary. */
-
-		sender->last_seqno = message.seqno-1;
-		sender->seqno_gap = SEQNO_EWMA_UNITY;
-		sender->last_rssi = packetbuf_attr(PACKETBUF_ATTR_RSSI); /* Updated RSSI AND LQI associated with messages sent from node "sender" */
-  		sender->last_lqi = packetbuf_attr(PACKETBUF_ATTR_LINK_QUALITY);
-
-		/* Compute average sequence number gap associated with messages from sender (this indicates the number of lost broadcast packets) */
-
-		seqno_gap = message.seqno - sender->last_seqno;
-  		sender->seqno_gap = (((uint32_t)seqno_gap * SEQNO_EWMA_UNITY) *
-                      SEQNO_EWMA_ALPHA) / SEQNO_EWMA_UNITY +
-                      ((uint32_t)sender->seqno_gap * (SEQNO_EWMA_UNITY - SEQNO_EWMA_ALPHA)) / SEQNO_EWMA_UNITY;
-
-		/* Update sender's last sequence number */
-
-		sender->last_seqno = message.seqno;
-
-		/* Print quality metrics if we are in debug mode */
-
-		#if DEBUG
-
-		printf("broadcast message received from %d.%d with seqno %d, RSSI %u, LQI %u, avg seqno gap %d.%02d\n",
-         from->u8[0], from->u8[1],
-         message.seqno,
-         packetbuf_attr(PACKETBUF_ATTR_RSSI),
-         packetbuf_attr(PACKETBUF_ATTR_LINK_QUALITY),
-         (int)(sender->seqno_gap / SEQNO_EWMA_UNITY),
-         (int)(((100UL * sender->seqno_gap) / SEQNO_EWMA_UNITY) % 100));
-
-		#endif
+		 process_start(&update_process, NULL); /* Start the gradient update */
 	}
 }
 
@@ -153,8 +89,9 @@ PROCESS_THREAD(main_process, ev, data) /* protothread for main process */
 	static uint8_t seqno = 0;
 	static data_message_t out;
 	
-	/* Initialize key field of out */
+	/* Initialize constant fields of out */
 	out.key = M_KEY;
+	out.addr = NODE_ID;
 
 	node_t *topleft; /* Pointer to top-left node in the grid */
 
@@ -249,6 +186,117 @@ PROCESS_THREAD(wait_process, ev, data)
 	process_exit(&main_process); /* End main process once button sensor is pressed */
 
 	PROCESS_END();
+}
+
+PROCESS_THREAD(update_process, ev, data) /* Executes when node receives message from a neighbor */
+{
+	node_t *cur, *sender; /* Pointers to node on which this program runs, and neighboring node that sent message */
+
+	static data_message_t message; /* Temporary variable to store received data */
+	uint8_t seqno_gap; /* Used in computing average sequence number gap */
+
+	/* Variables used to convert raw sensor values to usable ones */
+
+	static float s_t, s_h;
+	static int dec_t; /* Separate integral and fractional parts are necessary as contiki OS uses fixed point only */
+	static int dec_h;
+	static float frac_t;
+	static float frac_h;
+
+	PROCESS_BEGIN(); /* Start the process */
+
+	/* Store contents of packet buffer */
+
+	packetbuf_copyto(&message);
+		
+
+/**********************************************************************************************************/	
+/* This section contains calculations of temperature, humidity, and quality metrics as well as offering various DEBUG printouts.  Variables s_t and s_h are relevant to the algorithm update, however! */
+	
+	#if DEBUG
+
+	printf("Key %d, Temp %d, Seqno %d, Humidity %d\n", message.key, message.temp, message.seqno, message.humid);
+
+	#endif
+
+	/* Temperature conversion */
+
+	s_t = -39.60 + 0.01*message.temp; /* Store temperature in degrees C */
+	dec_t = s_t; /* Store integral part */
+	frac_t = s_t - dec_t; /* Store fractional part */
+
+	/* Humidity conversion */
+
+	s_h = -4 + .0405*message.humid + (-2.8 * 0.000001*(pow(message.humid,2))); /*Store relative humidity (%)*/
+	dec_h = s_h; /* Store integral part */
+	frac_h = s_h - dec_h; /* Store fractional part */
+
+
+	printf("Message received from %d.%d:\n", from->u8[0], from->u8[1]); /* Print the message */
+	printf("The message key is %d, the temperature value is %d.%02u degrees C (%d), and the humidity value is %d.%02u % (%d)\n", message.key, dec_t, (unsigned int)(100*frac_t), message.temp, dec_h, (unsigned int)(100*frac_h), message.humid);
+
+	/* Update message quality metrics. Not strictly necessary as the employed algorithm accounts for communications unreliabiliy, but it's useful to have for debugging if necessary. */
+
+	sender->last_seqno = message.seqno-1;
+	sender->seqno_gap = SEQNO_EWMA_UNITY;
+	sender->last_rssi = packetbuf_attr(PACKETBUF_ATTR_RSSI); /* Updated RSSI AND LQI associated with messages sent from node "sender" */
+  	sender->last_lqi = packetbuf_attr(PACKETBUF_ATTR_LINK_QUALITY);
+
+	/* Compute average sequence number gap associated with messages from sender (this indicates the number of lost broadcast packets) */
+
+	seqno_gap = message.seqno - sender->last_seqno;
+  	sender->seqno_gap = (((uint32_t)seqno_gap * SEQNO_EWMA_UNITY) *
+                      SEQNO_EWMA_ALPHA) / SEQNO_EWMA_UNITY +
+                      ((uint32_t)sender->seqno_gap * (SEQNO_EWMA_UNITY - SEQNO_EWMA_ALPHA)) / SEQNO_EWMA_UNITY;
+
+	/* Update sender's last sequence number */
+
+	sender->last_seqno = message.seqno;
+
+	/* Print quality metrics if we are in debug mode */
+
+	#if DEBUG
+
+	printf("broadcast message received from %d.%d with seqno %d, RSSI %u, LQI %u, avg seqno gap %d.%02d\n",
+         from->u8[0], from->u8[1],
+         message.seqno,
+         packetbuf_attr(PACKETBUF_ATTR_RSSI),
+         packetbuf_attr(PACKETBUF_ATTR_LINK_QUALITY),
+         (int)(sender->seqno_gap / SEQNO_EWMA_UNITY),
+         (int)(((100UL * sender->seqno_gap) / SEQNO_EWMA_UNITY) % 100));
+
+	#endif
+
+/**********************************************************************************************************************/
+/* In this section, the estimate update is performed, based on the censored broadcast algorithm */
+
+	cur = getNode(NODE_ID, list_head(node_list)); /* Get a pointer to the node on which this program is running */
+	sender = getNode(message.addr, list_head(node_list)); /* Get a pointer to the node that sent the message */
+
+	if((sender->b == true) && (cur->b == false)) /* Broadcast from participant to non-participant */
+	{
+		cur->h = 1; /* cur MUST be 1 hop away from a participant */
+		cur->Xopt = sender->Xopt; /* Cur holds the estimate sent by the participant */
+		cur->Yopt = sender->Yopt;
+	}
+
+	else if((sender->b == false) && (cur->b == false)) /* Broadcast from non-participant to non-participant */
+	{
+		if(cur->h > sender->h) /* Only perform update if sender is closer to participants */
+		{
+			cur->h = sender->h + 1; /* Initialization conditions aside, cur is one farther than sender */
+			cur->Xopt = sender->Xopt; /* Once again, Cur holds the estimate */
+			cur->Yopt = sender->Yopt;
+		}
+	}
+
+	else if((sender->b == true) && (cur->b == true)) /* Broadcast from participant to participant */
+	{
+		/* TODO: need observational model */
+	}
+
+
+	PROCESS_END(); /* End the process */
 }
 
 /* Takes a node address given by row and column, and converts it into a rime address. */
@@ -396,6 +444,31 @@ void comms_close(struct broadcast_conn *one, struct broadcast_conn *two)
 {
 	broadcast_close(one);
 	broadcast_close(two);
+}
+
+/* This function returns the average diameter of an air molecule based on individual diameters and concentrations */
+
+double get_air_diam()
+{
+	/* Average of individual diameters, weighted by concentrations */
+
+	return (N2_CONC * DB_N2) + (O2_CONC * DB_O2) + (AR_CONC * DB_AR) + (CO2_CONC * DB_CO2);
+}
+
+/* This function returns the coefficient for diffusion of water vapor through air, based on measured temperature in celsius */
+
+double get_diff_coeff(double celsius)
+{
+	double kelvin = celsius + 273.15; /* Convert to absolute temperature */
+	
+	/* Now, perform calculations using intermediate vals for simplicity */
+
+	double inter = pow(KB/M_PI, 1.5); 
+	inter *= (2.0/3.0)*pow(0.5*(1/(MA_H2O/N_AVO) + 1/(MB_AIR/N_AVO)), 0.5);
+	inter *= 4.0*pow(kelvin, 1.5);
+	inter /= (P_ATMOS*(pow(DA_H2O + DB_AIR, 2)));
+
+	return inter;
 }
 
 
